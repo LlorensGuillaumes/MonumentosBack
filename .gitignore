@@ -1,0 +1,32 @@
+node_modules/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Scraped data
+data/
+
+# Exported files
+*.geojson
+*.html
+
+# Environment
+.env
+.env.*
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Windows artifacts
+nul
+
+# Temp files with wrong paths
+C:*
+Users*
+
+# Markdown notes
+*.md
+!README.md
