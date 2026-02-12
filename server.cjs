@@ -443,29 +443,34 @@ const RELEVANCE_SCORE = `(
     CASE
         WHEN w.heritage_label ILIKE '%patrimonio de la humanidad%'
           OR w.heritage_label ILIKE '%world heritage%'
-          OR w.heritage_label ILIKE '%parte de un sitio Patrimonio%' THEN 20
+          OR w.heritage_label ILIKE '%parte de un sitio Patrimonio%'
+          OR w.heritage_label ILIKE '%patrimoine mondial%'
+          OR w.heritage_label ILIKE '%patrimonio dell''umanità%'
+          OR w.heritage_label ILIKE '%Património Mundial%' THEN 20
         WHEN w.heritage_label ILIKE '%classé%'
           OR w.heritage_label = 'bien de interés cultural'
           OR w.heritage_label = 'BIC'
-          OR w.heritage_label = 'Monumento' THEN 15
+          OR w.heritage_label ILIKE '%Monumento Nacional%'
+          OR w.heritage_label ILIKE '%Monumento de Interesse Público%' THEN 15
         WHEN w.heritage_label ILIKE '%inscrit%'
           OR w.heritage_label ILIKE '%Interesse Público%'
-          OR w.heritage_label ILIKE '%bene culturale%' THEN 12
+          OR w.heritage_label ILIKE '%bene culturale%'
+          OR w.heritage_label ILIKE '%Bien cultural%'
+          OR w.heritage_label ILIKE '%notevole interesse%' THEN 12
         WHEN w.heritage_label IS NOT NULL THEN 8
         ELSE 0
     END
     + CASE WHEN w.wikipedia_url IS NOT NULL THEN 10 ELSE 0 END
     + CASE
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 2000 THEN 15
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 500 THEN 12
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 100 THEN 8
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 0 THEN 3
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 500 THEN 5
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 100 THEN 3
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 0 THEN 1
         ELSE 0
     END
     + CASE WHEN w.imagen_url IS NOT NULL THEN 10 ELSE 0 END
     + CASE WHEN b.latitud IS NOT NULL THEN 5 ELSE 0 END
-    + CASE WHEN w.estilo IS NOT NULL THEN 5 ELSE 0 END
-    + CASE WHEN w.arquitecto IS NOT NULL THEN 4 ELSE 0 END
+    + CASE WHEN w.estilo IS NOT NULL THEN 3 ELSE 0 END
+    + CASE WHEN w.arquitecto IS NOT NULL THEN 1 ELSE 0 END
     + CASE WHEN w.inception IS NOT NULL THEN 3 ELSE 0 END
     + CASE WHEN w.commons_category IS NOT NULL THEN 3 ELSE 0 END
 )`;
@@ -603,19 +608,47 @@ app.get('/api/monumentos', async (req, res) => {
 
         // Get items
         const allParams = [...params, limit, offset];
-        const query = `
-            SELECT
-                b.id, b.denominacion, b.tipo, b.clase, b.categoria,
-                b.provincia, b.comarca, b.municipio, b.localidad,
-                b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
-                w.qid, w.descripcion, w.imagen_url, w.estilo, w.arquitecto,
-                w.heritage_label, w.wikipedia_url
-            FROM bienes b
-            LEFT JOIN wikidata w ON b.id = w.bien_id
-            ${whereClause}
-            ORDER BY ${SORT_OPTIONS[req.query.sort] || SORT_OPTIONS['relevancia']}
-            LIMIT $${pi++} OFFSET $${pi}
-        `;
+        const sortKey = req.query.sort || 'relevancia';
+        const useInterleave = sortKey === 'relevancia' && !req.query.pais;
+
+        let query;
+        if (useInterleave) {
+            query = `
+                WITH scored AS (
+                    SELECT
+                        b.id, b.denominacion, b.tipo, b.clase, b.categoria,
+                        b.provincia, b.comarca, b.municipio, b.localidad,
+                        b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
+                        w.qid, w.descripcion, w.imagen_url, w.estilo, w.arquitecto,
+                        w.heritage_label, w.wikipedia_url,
+                        ${RELEVANCE_SCORE} as _score,
+                        ROW_NUMBER() OVER (PARTITION BY b.pais ORDER BY ${RELEVANCE_SCORE} DESC, LOWER(b.denominacion)) as country_rank
+                    FROM bienes b
+                    LEFT JOIN wikidata w ON b.id = w.bien_id
+                    ${whereClause}
+                )
+                SELECT id, denominacion, tipo, clase, categoria, provincia, comarca,
+                       municipio, localidad, latitud, longitud, comunidad_autonoma, pais,
+                       qid, descripcion, imagen_url, estilo, arquitecto, heritage_label, wikipedia_url
+                FROM scored
+                ORDER BY country_rank, _score DESC, LOWER(denominacion)
+                LIMIT $${pi++} OFFSET $${pi}
+            `;
+        } else {
+            query = `
+                SELECT
+                    b.id, b.denominacion, b.tipo, b.clase, b.categoria,
+                    b.provincia, b.comarca, b.municipio, b.localidad,
+                    b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
+                    w.qid, w.descripcion, w.imagen_url, w.estilo, w.arquitecto,
+                    w.heritage_label, w.wikipedia_url
+                FROM bienes b
+                LEFT JOIN wikidata w ON b.id = w.bien_id
+                ${whereClause}
+                ORDER BY ${SORT_OPTIONS[sortKey] || SORT_OPTIONS['relevancia']}
+                LIMIT $${pi++} OFFSET $${pi}
+            `;
+        }
 
         const items = await db.query(query, allParams);
 
