@@ -439,7 +439,17 @@ app.delete('/api/favoritos/:bienId', authMiddleware, async (req, res) => {
 });
 
 // Opciones de ordenación (whitelist para evitar SQL injection)
+const RELEVANCE_SCORE = `(
+    CASE WHEN w.heritage_label IS NOT NULL THEN 3 ELSE 0 END
+    + CASE WHEN w.wikipedia_url IS NOT NULL THEN 2 ELSE 0 END
+    + CASE WHEN w.qid IS NOT NULL THEN 2 ELSE 0 END
+    + CASE WHEN w.imagen_url IS NOT NULL THEN 1 ELSE 0 END
+    + CASE WHEN w.commons_category IS NOT NULL THEN 1 ELSE 0 END
+    + CASE WHEN b.latitud IS NOT NULL THEN 1 ELSE 0 END
+)`;
+
 const SORT_OPTIONS = {
+    'relevancia':     `${RELEVANCE_SCORE} DESC, LOWER(b.denominacion) ASC`,
     'nombre_asc':     'LOWER(b.denominacion) ASC',
     'nombre_desc':    'LOWER(b.denominacion) DESC',
     'municipio_asc':  'LOWER(b.municipio) ASC, LOWER(b.denominacion) ASC',
@@ -581,7 +591,7 @@ app.get('/api/monumentos', async (req, res) => {
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
             ${whereClause}
-            ORDER BY ${SORT_OPTIONS[req.query.sort] || SORT_OPTIONS['nombre_asc']}
+            ORDER BY ${SORT_OPTIONS[req.query.sort] || SORT_OPTIONS['relevancia']}
             LIMIT $${pi++} OFFSET $${pi}
         `;
 
