@@ -15,6 +15,7 @@ function getPool() {
             user: process.env.PGUSER || 'patrimonio',
             password: process.env.PGPASSWORD || 'patrimonio2026',
             database: process.env.PGDATABASE || 'patrimonio',
+            ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
         });
     }
     return _pool;
