@@ -11,7 +11,7 @@ function getPool() {
     if (!_pool) {
         if (process.env.DATABASE_URL) {
             _pool = new Pool({
-                connectionString: process.env.DATABASE_URL,
+                connectionString: process.env.DATABASE_URL.replace(/\s+/g, ''),
                 ssl: { rejectUnauthorized: false },
             });
         } else {
