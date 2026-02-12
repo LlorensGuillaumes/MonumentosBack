@@ -17,6 +17,7 @@ async function geocode(municipio, provincia, pais) {
     'España': 'Spain',
     'Francia': 'France',
     'Portugal': 'Portugal',
+    'Italia': 'Italy',
   };
   const country = countryMap[pais] || pais;
 

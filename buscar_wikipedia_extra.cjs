@@ -24,14 +24,14 @@ const DELAY_MS = 1500;
 const BATCH_SIZE = 80;
 
 // Tots els idiomes peninsulars (existents + nous)
-const TOTS_IDIOMES = ['es', 'fr', 'ca', 'eu', 'gl', 'ast', 'en', 'oc', 'an', 'ext', 'lad', 'pt'];
+const TOTS_IDIOMES = ['es', 'fr', 'it', 'ca', 'eu', 'gl', 'ast', 'en', 'oc', 'an', 'ext', 'lad', 'pt'];
 // Només els nous que no estaven al script original
-const IDIOMES_NOUS = ['fr', 'oc', 'an', 'ext', 'lad', 'pt'];
+const IDIOMES_NOUS = ['fr', 'it', 'oc', 'an', 'ext', 'lad', 'pt'];
 // Ordre de preferència complet per escollir wikipedia_url
-const PREFERENCIA = ['es', 'fr', 'ca', 'eu', 'gl', 'ast', 'an', 'oc', 'ext', 'pt', 'lad', 'en'];
+const PREFERENCIA = ['es', 'it', 'fr', 'ca', 'eu', 'gl', 'ast', 'an', 'oc', 'ext', 'pt', 'lad', 'en'];
 
 const NOMS_IDIOMES = {
-    es: 'Español', fr: 'Français', ca: 'Català', eu: 'Euskara', gl: 'Galego',
+    es: 'Español', fr: 'Français', it: 'Italiano', ca: 'Català', eu: 'Euskara', gl: 'Galego',
     ast: 'Asturianu', en: 'English', oc: 'Occitan/Aranès',
     an: 'Aragonés', ext: 'Estremeñu', lad: 'Ladino', pt: 'Português',
 };
@@ -116,6 +116,8 @@ async function main() {
     const actualizar = args.includes('--actualizar');
     const regionIdx = args.indexOf('--region');
     const regionArg = regionIdx !== -1 ? args[regionIdx + 1] : null;
+    const paisIdx = args.indexOf('--pais');
+    const paisArg = paisIdx !== -1 ? args[paisIdx + 1] : null;
 
     console.log('=== Cerca Wikipedia en idiomes peninsulars ===');
     console.log(`Idiomes: ${TOTS_IDIOMES.map(w => `${w} (${NOMS_IDIOMES[w]})`).join(', ')}`);
@@ -134,6 +136,11 @@ async function main() {
         sqlQuery += ` AND b.comunidad_autonoma = ?`;
         params.push(regionArg);
         console.log(`Regió: ${regionArg}`);
+    }
+    if (paisArg) {
+        sqlQuery += ` AND b.pais = ?`;
+        params.push(paisArg);
+        console.log(`País: ${paisArg}`);
     }
 
     const items = (await db.query(sqlQuery, params)).rows;
