@@ -440,12 +440,34 @@ app.delete('/api/favoritos/:bienId', authMiddleware, async (req, res) => {
 
 // Opciones de ordenación (whitelist para evitar SQL injection)
 const RELEVANCE_SCORE = `(
-    CASE WHEN w.heritage_label IS NOT NULL THEN 3 ELSE 0 END
-    + CASE WHEN w.wikipedia_url IS NOT NULL THEN 2 ELSE 0 END
-    + CASE WHEN w.qid IS NOT NULL THEN 2 ELSE 0 END
-    + CASE WHEN w.imagen_url IS NOT NULL THEN 1 ELSE 0 END
-    + CASE WHEN w.commons_category IS NOT NULL THEN 1 ELSE 0 END
-    + CASE WHEN b.latitud IS NOT NULL THEN 1 ELSE 0 END
+    CASE
+        WHEN w.heritage_label ILIKE '%patrimonio de la humanidad%'
+          OR w.heritage_label ILIKE '%world heritage%'
+          OR w.heritage_label ILIKE '%parte de un sitio Patrimonio%' THEN 20
+        WHEN w.heritage_label ILIKE '%classé%'
+          OR w.heritage_label = 'bien de interés cultural'
+          OR w.heritage_label = 'BIC'
+          OR w.heritage_label = 'Monumento' THEN 15
+        WHEN w.heritage_label ILIKE '%inscrit%'
+          OR w.heritage_label ILIKE '%Interesse Público%'
+          OR w.heritage_label ILIKE '%bene culturale%' THEN 12
+        WHEN w.heritage_label IS NOT NULL THEN 8
+        ELSE 0
+    END
+    + CASE WHEN w.wikipedia_url IS NOT NULL THEN 10 ELSE 0 END
+    + CASE
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 2000 THEN 15
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 500 THEN 12
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 100 THEN 8
+        WHEN LENGTH(COALESCE(w.descripcion,'')) > 0 THEN 3
+        ELSE 0
+    END
+    + CASE WHEN w.imagen_url IS NOT NULL THEN 10 ELSE 0 END
+    + CASE WHEN b.latitud IS NOT NULL THEN 5 ELSE 0 END
+    + CASE WHEN w.estilo IS NOT NULL THEN 5 ELSE 0 END
+    + CASE WHEN w.arquitecto IS NOT NULL THEN 4 ELSE 0 END
+    + CASE WHEN w.inception IS NOT NULL THEN 3 ELSE 0 END
+    + CASE WHEN w.commons_category IS NOT NULL THEN 3 ELSE 0 END
 )`;
 
 const SORT_OPTIONS = {
