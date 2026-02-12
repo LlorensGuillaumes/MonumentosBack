@@ -9,14 +9,20 @@ let _initialized = false;
 
 function getPool() {
     if (!_pool) {
-        _pool = new Pool({
-            host: process.env.PGHOST || 'localhost',
-            port: parseInt(process.env.PGPORT) || 5432,
-            user: process.env.PGUSER || 'patrimonio',
-            password: process.env.PGPASSWORD || 'patrimonio2026',
-            database: process.env.PGDATABASE || 'patrimonio',
-            ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
-        });
+        if (process.env.DATABASE_URL) {
+            _pool = new Pool({
+                connectionString: process.env.DATABASE_URL,
+                ssl: { rejectUnauthorized: false },
+            });
+        } else {
+            _pool = new Pool({
+                host: process.env.PGHOST || 'localhost',
+                port: parseInt(process.env.PGPORT) || 5432,
+                user: process.env.PGUSER || 'patrimonio',
+                password: process.env.PGPASSWORD || 'patrimonio2026',
+                database: process.env.PGDATABASE || 'patrimonio',
+            });
+        }
     }
     return _pool;
 }
