@@ -1466,6 +1466,73 @@ app.post('/api/email/cancel', (req, res) => {
     res.json({ ok: true, message: 'No hay envío en curso' });
 });
 
+// ============== WIKIPEDIA ENRICHMENT ==============
+
+/**
+ * GET /api/monumentos/:id/wikipedia
+ * Obtiene el extracto de Wikipedia para un monumento
+ */
+app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+
+        const result = await db.query(
+            'SELECT wikipedia_url, descripcion FROM wikidata WHERE bien_id = ?',
+            [id]
+        );
+        const row = result.rows[0];
+
+        if (!row || !row.wikipedia_url) {
+            return res.status(404).json({ error: 'No hay URL de Wikipedia para este monumento' });
+        }
+
+        // Si ya tenemos descripción larga en DB, devolver directamente (cache)
+        if (row.descripcion && row.descripcion.length > 200) {
+            return res.json({ extract: row.descripcion, source: 'cache', lang: null });
+        }
+
+        // Extraer idioma y título de la URL de Wikipedia
+        const urlMatch = row.wikipedia_url.match(/^https?:\/\/([a-z]+)\.wikipedia\.org\/wiki\/(.+)$/i);
+        if (!urlMatch) {
+            return res.status(400).json({ error: 'URL de Wikipedia no válida' });
+        }
+
+        const lang = urlMatch[1];
+        const title = urlMatch[2];
+
+        // Llamar a la API REST de Wikipedia
+        const wikiResponse = await fetch(
+            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(title))}`,
+            { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } }
+        );
+
+        if (!wikiResponse.ok) {
+            return res.status(502).json({ error: 'Error al obtener datos de Wikipedia' });
+        }
+
+        const wikiData = await wikiResponse.json();
+        const extract = wikiData.extract;
+
+        if (!extract) {
+            return res.status(404).json({ error: 'No se encontró extracto en Wikipedia' });
+        }
+
+        // Guardar en DB como cache para futuras peticiones
+        try {
+            await db.query(
+                'UPDATE wikidata SET descripcion = ? WHERE bien_id = ?',
+                [extract, id]
+            );
+        } catch (dbErr) {
+            console.error(`[Wikipedia] Error guardando cache para bien_id=${id}: ${dbErr.message}`);
+        }
+
+        res.json({ extract, source: 'wikipedia', lang });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -1493,4 +1560,5 @@ app.listen(PORT, () => {
     console.log(`  GET  /api/favoritos        - Listar favoritos`);
     console.log(`  POST /api/favoritos/:id    - Añadir favorito`);
     console.log(`  DELETE /api/favoritos/:id  - Quitar favorito`);
+    console.log(`  GET  /api/monumentos/:id/wikipedia - Extracto Wikipedia`);
 });
