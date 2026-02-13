@@ -197,8 +197,7 @@ async function descargarPatrimonioCCAA(nombre, qid) {
     const excluirBarcelona = nombre === 'Catalunya';
     const filtroExcluir = excluirBarcelona ? `
     # Excluir Barcelona provincia (Q81949) - ya cubierta por DIBA
-    FILTER NOT EXISTS { ?item wdt:P131/wdt:P131 wd:Q81949 }
-    FILTER NOT EXISTS { ?item wdt:P131 wd:Q81949 }` : '';
+    FILTER NOT EXISTS { ?item wdt:P131+ wd:Q81949 }` : '';
 
     // Query para obtener heritage items de la CCAA
     const query = `
@@ -206,19 +205,9 @@ SELECT DISTINCT ?item ?itemLabel ?itemDescription ?municipioLabel ?coord ?image
        ?heritageLabel ?inception ?commonsCategory ?articleEs ?estilo ?estiloLabel
        ?provinciaLabel
 WHERE {
-    # Heritage items en la CCAA (2 niveles de P131)
-    {
-        ?item wdt:P1435 ?heritage .
-        ?item wdt:P131 ?loc .
-        ?loc wdt:P131/wdt:P131 wd:${qid} .
-    } UNION {
-        ?item wdt:P1435 ?heritage .
-        ?item wdt:P131 ?loc .
-        ?loc wdt:P131 wd:${qid} .
-    } UNION {
-        ?item wdt:P1435 ?heritage .
-        ?item wdt:P131 wd:${qid} .
-    }
+    # Heritage items en la CCAA (transitive P131 - any depth)
+    ?item wdt:P1435 ?heritage .
+    ?item wdt:P131+ wd:${qid} .
     ${filtroExcluir}
 
     OPTIONAL { ?item wdt:P625 ?coord }

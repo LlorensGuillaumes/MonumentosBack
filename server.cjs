@@ -32,11 +32,16 @@ app.use(express.json());
 
 function authMiddleware(req, res, next) {
     const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
+    let token = null;
+    if (header && header.startsWith('Bearer ')) {
+        token = header.split(' ')[1];
+    } else if (req.query.token) {
+        token = req.query.token;
+    }
+    if (!token) {
         return res.status(401).json({ error: 'Token requerido' });
     }
     try {
-        const token = header.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
         next();
@@ -71,6 +76,21 @@ async function adminMiddleware(req, res, next) {
             return res.status(403).json({ error: 'Acceso denegado: se requiere rol admin' });
         }
         req.user.rol = usuario.rol;
+        next();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+async function premiumMiddleware(req, res, next) {
+    try {
+        const usuario = await db.obtenerUsuarioPorId(req.user.id);
+        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const isPremium = usuario.premium && (!usuario.premium_hasta || new Date(usuario.premium_hasta) > new Date());
+        if (!isPremium && usuario.rol !== 'admin') {
+            return res.status(403).json({ error: 'Función premium requerida', code: 'PREMIUM_REQUIRED' });
+        }
+        req.isPremium = true;
         next();
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -659,6 +679,67 @@ app.get('/api/monumentos', async (req, res) => {
             total,
             total_pages: Math.ceil(total / limit),
             items: items.rows,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/monumentos/radio?lat=...&lng=...&km=...
+ * Buscar monumentos en un radio desde un punto
+ */
+app.get('/api/monumentos/radio', async (req, res) => {
+    try {
+        const lat = parseFloat(req.query.lat);
+        const lng = parseFloat(req.query.lng);
+        const km = Math.min(200, Math.max(1, parseInt(req.query.km) || 50));
+        const limit = Math.min(200, parseInt(req.query.limit) || 100);
+
+        if (isNaN(lat) || isNaN(lng)) {
+            return res.status(400).json({ error: 'lat y lng requeridos' });
+        }
+
+        let extraWhere = '';
+        let extraParams = [lat, lng, km, limit];
+        let pi = 5;
+
+        if (req.query.pais) {
+            extraWhere += ` AND b.pais = $${pi++}`;
+            extraParams.push(req.query.pais);
+        }
+        if (req.query.categoria) {
+            extraWhere += ` AND b.categoria ILIKE $${pi++}`;
+            extraParams.push(`%${req.query.categoria}%`);
+        }
+
+        const result = await db.query(`
+            SELECT b.id, b.denominacion, b.categoria, b.municipio, b.provincia, b.pais,
+                   b.latitud, b.longitud, b.comunidad_autonoma,
+                   w.imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url,
+                   (6371 * acos(
+                       cos(radians($1)) * cos(radians(b.latitud)) *
+                       cos(radians(b.longitud) - radians($2)) +
+                       sin(radians($1)) * sin(radians(b.latitud))
+                   )) AS distancia_km
+            FROM bienes b
+            LEFT JOIN wikidata w ON b.id = w.bien_id
+            WHERE b.latitud IS NOT NULL AND b.longitud IS NOT NULL
+              AND (6371 * acos(
+                  cos(radians($1)) * cos(radians(b.latitud)) *
+                  cos(radians(b.longitud) - radians($2)) +
+                  sin(radians($1)) * sin(radians(b.latitud))
+              )) <= $3
+              ${extraWhere}
+            ORDER BY distancia_km
+            LIMIT $4
+        `, extraParams);
+
+        res.json({
+            centro: { lat, lng },
+            radio_km: km,
+            total: result.rows.length,
+            items: result.rows,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1363,16 +1444,12 @@ app.post('/api/email/send', upload.array('archivos', 10), async (req, res) => {
             maxMessages: 3,
             rateDelta: 20000,
             rateLimit: 1,
+            connectionTimeout: 15000,
+            greetingTimeout: 15000,
+            socketTimeout: 30000,
         });
 
-        // Verificar credenciales
-        try {
-            await transporter.verify();
-        } catch (err) {
-            return res.status(401).json({ error: `Error de autenticación Gmail: ${err.message}` });
-        }
-
-        // Iniciar job
+        // Iniciar job - responder inmediatamente (Render tiene timeout de 30s)
         emailJob = {
             running: true,
             total: contactos.length,
@@ -1384,8 +1461,24 @@ app.post('/api/email/send', upload.array('archivos', 10), async (req, res) => {
 
         res.json({ ok: true, total: contactos.length, message: `Iniciando envío a ${contactos.length} contactos` });
 
-        // Enviar secuencialmente en background
+        // Verificar credenciales y enviar en background
         (async () => {
+            // Verificar credenciales antes de enviar
+            try {
+                await Promise.race([
+                    transporter.verify(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout conectando a Gmail SMTP (15s)')), 15000))
+                ]);
+            } catch (err) {
+                transporter.close();
+                emailJob.running = false;
+                emailJob.failed = contactos.length;
+                emailJob.errors.push({ municipio: '(todos)', email: '-', error: `Autenticación Gmail fallida: ${err.message}` });
+                emailJob.finished_at = new Date().toISOString();
+                console.error(`[Email] Auth failed: ${err.message}`);
+                return;
+            }
+
             for (let i = 0; i < contactos.length; i++) {
                 if (!emailJob.running) break;
 
@@ -1642,6 +1735,652 @@ app.get('/api/admin/mensajes/:id/archivos/:archivoId', authMiddleware, adminMidd
         res.setHeader('Content-Disposition', `attachment; filename="${archivo.nombre}"`);
         res.setHeader('Content-Type', archivo.tipo || 'application/octet-stream');
         res.send(archivo.contenido);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== PROPUESTAS: USER ENDPOINTS ==============
+
+/**
+ * POST /api/propuestas
+ * Crear una propuesta de monumento (multipart, max 5 imágenes)
+ */
+app.post('/api/propuestas', authMiddleware, upload.array('imagenes', 5), async (req, res) => {
+    try {
+        const { denominacion, pais } = req.body;
+        if (!denominacion || !pais) {
+            return res.status(400).json({ error: 'Nombre y país son obligatorios' });
+        }
+
+        const propuestaId = await db.crearPropuesta({
+            usuario_id: req.user.id,
+            denominacion,
+            tipo: req.body.tipo || null,
+            categoria: req.body.categoria || null,
+            provincia: req.body.provincia || null,
+            comarca: req.body.comarca || null,
+            municipio: req.body.municipio || null,
+            localidad: req.body.localidad || null,
+            latitud: req.body.latitud ? parseFloat(req.body.latitud) : null,
+            longitud: req.body.longitud ? parseFloat(req.body.longitud) : null,
+            comunidad_autonoma: req.body.comunidad_autonoma || null,
+            pais,
+            descripcion: req.body.descripcion || null,
+            estilo: req.body.estilo || null,
+            material: req.body.material || null,
+            inception: req.body.inception || null,
+            arquitecto: req.body.arquitecto || null,
+            wikipedia_url: req.body.wikipedia_url || null,
+        });
+
+        // Save uploaded images
+        for (const f of (req.files || [])) {
+            await db.insertarPropuestaImagen({
+                propuesta_id: propuestaId,
+                nombre: f.originalname,
+                tipo: f.mimetype,
+                tamano: f.size,
+                contenido: f.buffer,
+                url: null,
+            });
+        }
+
+        // Save URL images
+        const imageUrls = req.body.image_urls ? JSON.parse(req.body.image_urls) : [];
+        for (const url of imageUrls) {
+            if (url && url.trim()) {
+                await db.insertarPropuestaImagen({
+                    propuesta_id: propuestaId,
+                    nombre: url.split('/').pop() || 'imagen',
+                    tipo: null,
+                    tamano: null,
+                    contenido: null,
+                    url: url.trim(),
+                });
+            }
+        }
+
+        res.status(201).json({ ok: true, id: propuestaId });
+    } catch (err) {
+        console.error('[Propuesta] Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/propuestas/mis
+ * Listar propuestas del usuario actual
+ */
+app.get('/api/propuestas/mis', authMiddleware, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        const data = await db.obtenerMisPropuestas(req.user.id, { page, limit });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== PROPUESTAS: ADMIN ENDPOINTS ==============
+
+/**
+ * GET /api/admin/propuestas
+ * Listar todas las propuestas (filtro por estado)
+ */
+app.get('/api/admin/propuestas', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        const estado = req.query.estado || undefined;
+        const data = await db.obtenerPropuestasAdmin({ page, limit, estado });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/propuestas/count
+ * Contar propuestas pendientes (para badge)
+ */
+app.get('/api/admin/propuestas/count', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const count = await db.contarPropuestasPendientes();
+        res.json({ pendientes: count });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/propuestas/:id
+ * Detalle de una propuesta con imágenes
+ */
+app.get('/api/admin/propuestas/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const data = await db.obtenerPropuesta(parseInt(req.params.id));
+        if (!data) return res.status(404).json({ error: 'Propuesta no encontrada' });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * PATCH /api/admin/propuestas/:id
+ * Editar campos de una propuesta antes de aprobar
+ */
+app.patch('/api/admin/propuestas/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const result = await db.actualizarPropuesta(parseInt(req.params.id), req.body);
+        if (!result) return res.status(400).json({ error: 'Sin campos válidos para actualizar' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/admin/propuestas/:id/aprobar
+ * Aprobar propuesta: crea bien + wikidata + imagenes en transacción
+ */
+app.post('/api/admin/propuestas/:id/aprobar', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const bienId = await db.aprobarPropuesta(parseInt(req.params.id), req.user.id);
+        res.json({ ok: true, bien_id: bienId });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/admin/propuestas/:id/rechazar
+ * Rechazar propuesta con motivo
+ */
+app.post('/api/admin/propuestas/:id/rechazar', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { notas } = req.body;
+        await db.rechazarPropuesta(parseInt(req.params.id), req.user.id, notas || null);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/propuestas/:id/imagenes/:imgId
+ * Descargar imagen de una propuesta
+ */
+app.get('/api/admin/propuestas/:id/imagenes/:imgId', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const img = await db.obtenerPropuestaImagen(parseInt(req.params.imgId));
+        if (!img || !img.contenido) return res.status(404).json({ error: 'Imagen no encontrada' });
+        res.setHeader('Content-Type', img.tipo || 'image/jpeg');
+        res.send(img.contenido);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== WIKIDATA SEARCH (ADMIN) ==============
+
+/**
+ * GET /api/admin/wikidata/search?q=...&pais=...
+ * Buscar en Wikidata por nombre + país
+ */
+app.get('/api/admin/wikidata/search', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { q, pais } = req.query;
+        if (!q) return res.status(400).json({ error: 'Parámetro q requerido' });
+
+        const paisQids = {
+            'España': 'Q29',
+            'Francia': 'Q142',
+            'Portugal': 'Q45',
+            'Italia': 'Q38',
+        };
+        const paisQid = paisQids[pais] || '';
+        const paisFilter = paisQid ? `?item wdt:P17 wd:${paisQid} .` : '';
+
+        const sparql = `
+            SELECT ?item ?itemLabel ?itemDescription ?image ?article ?coord WHERE {
+                ?item rdfs:label ?label . FILTER(CONTAINS(LCASE(?label), LCASE("${q.replace(/"/g, '\\"')}")))
+                ${paisFilter}
+                OPTIONAL { ?item wdt:P18 ?image }
+                OPTIONAL { ?item wdt:P625 ?coord }
+                OPTIONAL { ?article schema:about ?item ; schema:isPartOf <https://es.wikipedia.org/> }
+                SERVICE wikibase:label { bd:serviceParam wikibase:language "es,en,fr,pt,it" }
+            } LIMIT 10
+        `;
+
+        const wdResponse = await fetch(
+            `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}`,
+            {
+                headers: {
+                    'Accept': 'application/sparql-results+json',
+                    'User-Agent': 'PatrimonioEuropeo/1.0',
+                },
+            }
+        );
+
+        if (!wdResponse.ok) {
+            return res.status(502).json({ error: 'Error consultando Wikidata' });
+        }
+
+        const wdData = await wdResponse.json();
+        const results = (wdData.results?.bindings || []).map(b => {
+            const itemUri = b.item?.value || '';
+            const qid = itemUri.split('/').pop();
+            let lat = null, lng = null;
+            if (b.coord?.value) {
+                const match = b.coord.value.match(/Point\(([^ ]+) ([^ ]+)\)/);
+                if (match) { lng = parseFloat(match[1]); lat = parseFloat(match[2]); }
+            }
+            return {
+                qid,
+                label: b.itemLabel?.value || '',
+                description: b.itemDescription?.value || '',
+                image: b.image?.value || null,
+                wikipedia_url: b.article?.value || null,
+                lat,
+                lng,
+            };
+        });
+
+        // Deduplicate by QID
+        const seen = new Set();
+        const unique = results.filter(r => {
+            if (seen.has(r.qid)) return false;
+            seen.add(r.qid);
+            return true;
+        });
+
+        res.json(unique);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== NOTAS DE MONUMENTO ==============
+
+/**
+ * GET /api/monumentos/:id/notas
+ * Obtener notas de un monumento (público)
+ */
+app.get('/api/monumentos/:id/notas', async (req, res) => {
+    try {
+        const notas = await db.obtenerNotasMonumento(parseInt(req.params.id));
+        res.json(notas);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/monumentos/:id/notas
+ * Añadir una nota a un monumento (requiere login)
+ */
+app.post('/api/monumentos/:id/notas', authMiddleware, async (req, res) => {
+    try {
+        const { tipo, texto } = req.body;
+        if (!texto || !texto.trim()) return res.status(400).json({ error: 'Texto requerido' });
+        const validTypes = ['horario', 'precio', 'nota'];
+        const notaTipo = validTypes.includes(tipo) ? tipo : 'nota';
+        const nota = await db.crearNotaMonumento(parseInt(req.params.id), req.user.id, notaTipo, texto.trim());
+        // Fetch with user info
+        const notas = await db.obtenerNotasMonumento(parseInt(req.params.id));
+        const full = notas.find(n => n.id === nota.id);
+        res.status(201).json(full || nota);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/monumentos/:id/notas/:notaId
+ * Eliminar una nota propia (o cualquier nota si admin)
+ */
+app.delete('/api/monumentos/:id/notas/:notaId', authMiddleware, async (req, res) => {
+    try {
+        const notaId = parseInt(req.params.notaId);
+        const user = await db.obtenerUsuarioPorId(req.user.id);
+        let deleted;
+        if (user.rol === 'admin') {
+            deleted = await db.eliminarNotaMonumentoAdmin(notaId);
+        } else {
+            deleted = await db.eliminarNotaMonumento(notaId, req.user.id);
+        }
+        if (!deleted) return res.status(404).json({ error: 'Nota no encontrada' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== VALORACIONES ==============
+
+/**
+ * GET /api/monumentos/:id/valoraciones
+ * Obtener resumen de valoraciones + la del usuario actual si logueado
+ */
+app.get('/api/monumentos/:id/valoraciones', optionalAuth, async (req, res) => {
+    try {
+        const bienId = parseInt(req.params.id);
+        const summary = await db.obtenerValoracionesMonumento(bienId);
+        let user_rating = null;
+        if (req.user) {
+            user_rating = await db.obtenerValoracionUsuario(bienId, req.user.id);
+        }
+        res.json({ ...summary, user_rating });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/monumentos/:id/valoraciones
+ * Crear o actualizar valoración (requiere login)
+ */
+app.post('/api/monumentos/:id/valoraciones', authMiddleware, async (req, res) => {
+    try {
+        const { general, conservacion, accesibilidad } = req.body;
+        if (!general || general < 1 || general > 5) {
+            return res.status(400).json({ error: 'Valoración general (1-5) requerida' });
+        }
+        const rating = await db.upsertValoracion(
+            parseInt(req.params.id),
+            req.user.id,
+            general,
+            conservacion || null,
+            accesibilidad || null
+        );
+        res.json(rating);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== RUTAS ==============
+
+/**
+ * POST /api/rutas
+ * Crear una ruta nueva (premium)
+ */
+app.post('/api/rutas', authMiddleware, premiumMiddleware, async (req, res) => {
+    try {
+        const { nombre, centro_lat, centro_lng, radio_km, paradas } = req.body;
+        if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+        if (!paradas || !paradas.length) return res.status(400).json({ error: 'Al menos una parada requerida' });
+        if (paradas.length > 25) return res.status(400).json({ error: 'Máximo 25 paradas' });
+
+        const ruta = await db.crearRuta(req.user.id, nombre, centro_lat, centro_lng, radio_km);
+        await db.guardarParadasRuta(ruta.id, paradas.map((p, i) => ({
+            bien_id: p.bien_id,
+            orden: p.orden ?? i + 1,
+            notas: p.notas,
+        })));
+        const full = await db.obtenerRuta(ruta.id);
+        res.status(201).json(full);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/rutas
+ * Obtener mis rutas
+ */
+app.get('/api/rutas', authMiddleware, async (req, res) => {
+    try {
+        const rutas = await db.obtenerRutasUsuario(req.user.id);
+        res.json(rutas);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/rutas/:id
+ * Obtener una ruta con paradas
+ */
+app.get('/api/rutas/:id', authMiddleware, async (req, res) => {
+    try {
+        const ruta = await db.obtenerRuta(parseInt(req.params.id));
+        if (!ruta) return res.status(404).json({ error: 'Ruta no encontrada' });
+        if (ruta.usuario_id !== req.user.id) {
+            const user = await db.obtenerUsuarioPorId(req.user.id);
+            if (user.rol !== 'admin') return res.status(403).json({ error: 'Acceso denegado' });
+        }
+        res.json(ruta);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/rutas/:id
+ * Eliminar una ruta propia
+ */
+app.delete('/api/rutas/:id', authMiddleware, async (req, res) => {
+    try {
+        const deleted = await db.eliminarRuta(parseInt(req.params.id), req.user.id);
+        if (!deleted) return res.status(404).json({ error: 'Ruta no encontrada' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/rutas/optimizar
+ * Optimizar orden de paradas usando OSRM (público demo server)
+ */
+app.post('/api/rutas/optimizar', authMiddleware, premiumMiddleware, async (req, res) => {
+    try {
+        const { paradas } = req.body;
+        if (!paradas || paradas.length < 2) return res.status(400).json({ error: 'Mínimo 2 paradas' });
+        if (paradas.length > 25) return res.status(400).json({ error: 'Máximo 25 paradas' });
+
+        // Build coordinates string for OSRM
+        const coords = paradas.map(p => `${p.longitud},${p.latitud}`).join(';');
+        const osrmUrl = `https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=false&source=first&destination=last&geometries=geojson&overview=full`;
+
+        const osrmRes = await fetch(osrmUrl);
+        if (!osrmRes.ok) {
+            return res.status(502).json({ error: 'Error consultando servicio de rutas' });
+        }
+
+        const osrmData = await osrmRes.json();
+        if (osrmData.code !== 'Ok') {
+            return res.status(502).json({ error: 'No se pudo calcular la ruta', detail: osrmData.code });
+        }
+
+        const trip = osrmData.trips?.[0];
+        if (!trip) return res.status(502).json({ error: 'No se encontró ruta' });
+
+        // Map waypoint order
+        const waypoints = osrmData.waypoints || [];
+        const order = waypoints.map(wp => wp.waypoint_index);
+
+        res.json({
+            distancia_km: Math.round(trip.distance / 1000 * 10) / 10,
+            duracion_min: Math.round(trip.duration / 60),
+            orden_optimizado: order,
+            geometria: trip.geometry,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/rutas/:id/pdf
+ * Generar PDF de una ruta
+ */
+app.get('/api/rutas/:id/pdf', authMiddleware, premiumMiddleware, async (req, res) => {
+    try {
+        const ruta = await db.obtenerRuta(parseInt(req.params.id));
+        if (!ruta) return res.status(404).json({ error: 'Ruta no encontrada' });
+        if (ruta.usuario_id !== req.user.id) {
+            const user = await db.obtenerUsuarioPorId(req.user.id);
+            if (user.rol !== 'admin') return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="ruta-${ruta.id}.pdf"`);
+        doc.pipe(res);
+
+        // --- Cover page ---
+        doc.fontSize(28).font('Helvetica-Bold').text('Patrimonio Europeo', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(20).font('Helvetica').text(ruta.nombre, { align: 'center' });
+        doc.moveDown(1);
+        doc.fontSize(12).fillColor('#666')
+           .text(`${ruta.paradas.length} monumentos | Radio: ${ruta.radio_km || '?'} km`, { align: 'center' });
+        doc.moveDown(0.3);
+        doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // --- Index ---
+        doc.fillColor('#333').fontSize(14).font('Helvetica-Bold').text('Itinerario');
+        doc.moveDown(0.5);
+        ruta.paradas.forEach((p, i) => {
+            doc.fontSize(10).font('Helvetica')
+               .fillColor('#444')
+               .text(`${i + 1}. ${p.denominacion} — ${[p.municipio, p.provincia].filter(Boolean).join(', ')}`, {
+                   indent: 10,
+               });
+        });
+
+        // --- Monument pages ---
+        for (let i = 0; i < ruta.paradas.length; i++) {
+            const p = ruta.paradas[i];
+            doc.addPage();
+
+            // Header
+            doc.fontSize(18).font('Helvetica-Bold').fillColor('#1a365d')
+               .text(`${i + 1}. ${p.denominacion}`);
+            doc.moveDown(0.3);
+
+            // Location
+            doc.fontSize(10).font('Helvetica').fillColor('#666')
+               .text(`📍 ${[p.municipio, p.provincia, p.pais].filter(Boolean).join(', ')}`);
+            doc.moveDown(0.5);
+
+            // Metadata
+            if (p.categoria) {
+                doc.fontSize(9).fillColor('#888').text(`Categoría: ${p.categoria}`);
+            }
+            if (p.estilo) {
+                doc.fontSize(9).fillColor('#888').text(`Estilo: ${p.estilo}`);
+            }
+            if (p.inception) {
+                doc.fontSize(9).fillColor('#888').text(`Época: ${p.inception}`);
+            }
+            if (p.arquitecto) {
+                doc.fontSize(9).fillColor('#888').text(`Arquitecto: ${p.arquitecto}`);
+            }
+            doc.moveDown(0.5);
+
+            // Description
+            const desc = p.descripcion || '';
+            if (desc) {
+                doc.fontSize(10).fillColor('#333').font('Helvetica')
+                   .text(desc.length > 800 ? desc.slice(0, 800) + '...' : desc, {
+                       lineGap: 3,
+                   });
+                doc.moveDown(0.5);
+            }
+
+            // Coordinates
+            if (p.latitud && p.longitud) {
+                doc.fontSize(8).fillColor('#999')
+                   .text(`Coordenadas: ${p.latitud}, ${p.longitud}`);
+            }
+
+            // Wikipedia URL
+            if (p.wikipedia_url) {
+                doc.fontSize(8).fillColor('#2b6cb0')
+                   .text(`Wikipedia: ${p.wikipedia_url}`, { link: p.wikipedia_url });
+            }
+
+            // Notes from route
+            if (p.notas) {
+                doc.moveDown(0.5);
+                doc.fontSize(9).fillColor('#c05621').font('Helvetica-Oblique')
+                   .text(`Nota: ${p.notas}`);
+            }
+        }
+
+        // --- Back page ---
+        doc.addPage();
+        doc.fontSize(12).font('Helvetica').fillColor('#666')
+           .text('Ruta generada con Patrimonio Europeo', { align: 'center' });
+        doc.moveDown(1);
+        doc.fontSize(10)
+           .text('www.patrimonio-europeo.com', { align: 'center' });
+
+        doc.end();
+    } catch (err) {
+        if (!res.headersSent) {
+            res.status(500).json({ error: err.message });
+        }
+    }
+});
+
+// ============== SOCIAL HISTORY ==============
+
+/**
+ * GET /api/admin/social-history
+ * Obtener IDs de monumentos ya publicados (últimos 90 días)
+ */
+app.get('/api/admin/social-history', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const ids = await db.obtenerSocialHistoryIds(90);
+        res.json({ ids });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/admin/social-history
+ * Registrar un monumento como publicado
+ */
+app.post('/api/admin/social-history', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { bien_id, platform } = req.body;
+        if (!bien_id) return res.status(400).json({ error: 'bien_id requerido' });
+        const entry = await db.crearSocialHistory(bien_id, platform || null);
+        res.json(entry);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== SERVE UPLOADED IMAGES ==============
+
+/**
+ * GET /api/imagenes/:id/archivo
+ * Servir imagen BYTEA almacenada localmente
+ */
+app.get('/api/imagenes/:id/archivo', async (req, res) => {
+    try {
+        const img = await db.obtenerImagenArchivo(parseInt(req.params.id));
+        if (!img || !img.contenido) return res.status(404).json({ error: 'Imagen no encontrada' });
+        // Try to determine content type from url/titulo
+        let contentType = 'image/jpeg';
+        const name = (img.titulo || '').toLowerCase();
+        if (name.endsWith('.png')) contentType = 'image/png';
+        else if (name.endsWith('.webp')) contentType = 'image/webp';
+        else if (name.endsWith('.gif')) contentType = 'image/gif';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(img.contenido);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

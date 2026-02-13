@@ -177,6 +177,90 @@ async function inicializarTablas() {
             tamano INTEGER,
             contenido BYTEA
         );
+
+        CREATE TABLE IF NOT EXISTS propuestas_monumentos (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            denominacion TEXT NOT NULL,
+            tipo TEXT,
+            categoria TEXT,
+            provincia TEXT,
+            comarca TEXT,
+            municipio TEXT,
+            localidad TEXT,
+            latitud DOUBLE PRECISION,
+            longitud DOUBLE PRECISION,
+            comunidad_autonoma TEXT,
+            pais TEXT NOT NULL,
+            descripcion TEXT,
+            estilo TEXT,
+            material TEXT,
+            inception TEXT,
+            arquitecto TEXT,
+            wikipedia_url TEXT,
+            estado TEXT DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobada','rechazada')),
+            notas_admin TEXT,
+            revisado_por INTEGER REFERENCES usuarios(id),
+            bien_id INTEGER REFERENCES bienes(id),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            revisado_at TIMESTAMPTZ
+        );
+
+        CREATE TABLE IF NOT EXISTS propuestas_imagenes (
+            id SERIAL PRIMARY KEY,
+            propuesta_id INTEGER NOT NULL REFERENCES propuestas_monumentos(id) ON DELETE CASCADE,
+            nombre TEXT NOT NULL,
+            tipo TEXT,
+            tamano INTEGER,
+            contenido BYTEA,
+            url TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS social_history (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+            platform TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS notas_monumento (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            tipo TEXT DEFAULT 'nota' CHECK (tipo IN ('horario', 'precio', 'nota')),
+            texto TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS valoraciones_monumento (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            general INTEGER NOT NULL CHECK (general BETWEEN 1 AND 5),
+            conservacion INTEGER CHECK (conservacion BETWEEN 1 AND 5),
+            accesibilidad INTEGER CHECK (accesibilidad BETWEEN 1 AND 5),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(bien_id, usuario_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS rutas_usuario (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            nombre TEXT NOT NULL,
+            centro_lat DOUBLE PRECISION,
+            centro_lng DOUBLE PRECISION,
+            radio_km INTEGER,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS rutas_paradas (
+            id SERIAL PRIMARY KEY,
+            ruta_id INTEGER NOT NULL REFERENCES rutas_usuario(id) ON DELETE CASCADE,
+            bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+            orden INTEGER NOT NULL,
+            notas TEXT
+        );
     `);
 
     await pool.query(`
@@ -202,7 +286,30 @@ async function inicializarTablas() {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_bienes_pais_ccaa_codigo ON bienes(pais, comunidad_autonoma, codigo_fuente);
         CREATE INDEX IF NOT EXISTS idx_mensajes_created ON mensajes_contacto(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_mensajes_archivos_msg ON mensajes_archivos(mensaje_id);
+        CREATE INDEX IF NOT EXISTS idx_propuestas_usuario ON propuestas_monumentos(usuario_id);
+        CREATE INDEX IF NOT EXISTS idx_propuestas_estado ON propuestas_monumentos(estado);
+        CREATE INDEX IF NOT EXISTS idx_propuestas_imagenes_prop ON propuestas_imagenes(propuesta_id);
+        CREATE INDEX IF NOT EXISTS idx_social_history_bien ON social_history(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_social_history_created ON social_history(created_at);
+        CREATE INDEX IF NOT EXISTS idx_notas_monumento_bien ON notas_monumento(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_notas_monumento_usuario ON notas_monumento(usuario_id);
+        CREATE INDEX IF NOT EXISTS idx_valoraciones_bien ON valoraciones_monumento(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_valoraciones_usuario ON valoraciones_monumento(usuario_id);
+        CREATE INDEX IF NOT EXISTS idx_rutas_usuario ON rutas_usuario(usuario_id);
+        CREATE INDEX IF NOT EXISTS idx_rutas_paradas_ruta ON rutas_paradas(ruta_id);
+        CREATE INDEX IF NOT EXISTS idx_rutas_paradas_bien ON rutas_paradas(bien_id);
     `);
+
+    // Add contenido column to imagenes if not exists (for locally uploaded images)
+    try {
+        await pool.query(`ALTER TABLE imagenes ADD COLUMN IF NOT EXISTS contenido BYTEA`);
+    } catch (e) { /* column may already exist */ }
+
+    // Add premium fields to usuarios
+    try {
+        await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS premium BOOLEAN DEFAULT false`);
+        await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS premium_hasta TIMESTAMPTZ`);
+    } catch (e) { /* columns may already exist */ }
 
     _initialized = true;
 }
@@ -580,8 +687,8 @@ async function estadisticasContactos() {
 async function crearUsuario(data) {
     await ensureInit();
     const result = await getPool().query(`
-        INSERT INTO usuarios (email, password_hash, nombre, idioma_por_defecto, google_id, avatar_url)
-        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id
+        INSERT INTO usuarios (email, password_hash, nombre, idioma_por_defecto, google_id, avatar_url, premium, premium_hasta)
+        VALUES ($1,$2,$3,$4,$5,$6, true, NOW() + INTERVAL '14 days') RETURNING id
     `, [data.email, data.password_hash, data.nombre, data.idioma_por_defecto, data.google_id, data.avatar_url]);
     return { lastInsertRowid: result.rows[0].id, changes: result.rowCount };
 }
@@ -594,7 +701,7 @@ async function obtenerUsuarioPorEmail(email) {
 
 async function obtenerUsuarioPorId(id) {
     await ensureInit();
-    const result = await getPool().query('SELECT id, email, nombre, idioma_por_defecto, google_id, avatar_url, rol, created_at, last_login FROM usuarios WHERE id = $1', [id]);
+    const result = await getPool().query('SELECT id, email, nombre, idioma_por_defecto, google_id, avatar_url, rol, premium, premium_hasta, created_at, last_login FROM usuarios WHERE id = $1', [id]);
     return result.rows[0];
 }
 
@@ -610,7 +717,7 @@ async function actualizarUsuario(id, data) {
     const valores = [];
     let i = 1;
     for (const [key, val] of Object.entries(data)) {
-        if (['nombre', 'idioma_por_defecto', 'avatar_url', 'password_hash', 'last_login', 'rol'].includes(key)) {
+        if (['nombre', 'idioma_por_defecto', 'avatar_url', 'password_hash', 'last_login', 'rol', 'premium', 'premium_hasta'].includes(key)) {
             campos.push(`${key} = $${i++}`);
             valores.push(val);
         }
@@ -878,6 +985,365 @@ async function eliminarNotaContacto(notaId) {
     return { changes: result.rowCount };
 }
 
+// =========== CRUD propuestas ===========
+
+async function crearPropuesta(data) {
+    await ensureInit();
+    const result = await getPool().query(`
+        INSERT INTO propuestas_monumentos (usuario_id, denominacion, tipo, categoria, provincia, comarca, municipio, localidad, latitud, longitud, comunidad_autonoma, pais, descripcion, estilo, material, inception, arquitecto, wikipedia_url)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        RETURNING id
+    `, [data.usuario_id, data.denominacion, data.tipo, data.categoria, data.provincia, data.comarca, data.municipio, data.localidad, data.latitud, data.longitud, data.comunidad_autonoma, data.pais, data.descripcion, data.estilo, data.material, data.inception, data.arquitecto, data.wikipedia_url]);
+    return result.rows[0].id;
+}
+
+async function insertarPropuestaImagen(data) {
+    await ensureInit();
+    const result = await getPool().query(`
+        INSERT INTO propuestas_imagenes (propuesta_id, nombre, tipo, tamano, contenido, url)
+        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id
+    `, [data.propuesta_id, data.nombre, data.tipo, data.tamano, data.contenido, data.url]);
+    return result.rows[0].id;
+}
+
+async function obtenerMisPropuestas(usuarioId, { page = 1, limit = 20 } = {}) {
+    await ensureInit();
+    const pool = getPool();
+    const offset = (page - 1) * limit;
+    const countR = await pool.query('SELECT COUNT(*) as n FROM propuestas_monumentos WHERE usuario_id = $1', [usuarioId]);
+    const total = countR.rows[0].n;
+    const items = await pool.query(`
+        SELECT p.*, u.nombre as revisado_por_nombre
+        FROM propuestas_monumentos p
+        LEFT JOIN usuarios u ON p.revisado_por = u.id
+        WHERE p.usuario_id = $1
+        ORDER BY p.created_at DESC
+        LIMIT $2 OFFSET $3
+    `, [usuarioId, limit, offset]);
+    return { items: items.rows, total, page, limit, pages: Math.ceil(total / limit) };
+}
+
+async function obtenerPropuestasAdmin({ page = 1, limit = 50, estado } = {}) {
+    await ensureInit();
+    const pool = getPool();
+    const offset = (page - 1) * limit;
+    let where = [];
+    let params = [];
+    let pi = 1;
+    if (estado) {
+        where.push(`p.estado = $${pi++}`);
+        params.push(estado);
+    }
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const countParams = [...params];
+    const countR = await pool.query(`SELECT COUNT(*) as n FROM propuestas_monumentos p ${whereClause}`, countParams);
+    const total = countR.rows[0].n;
+    params.push(limit, offset);
+    const items = await pool.query(`
+        SELECT p.*, u.nombre as usuario_nombre, u.email as usuario_email
+        FROM propuestas_monumentos p
+        LEFT JOIN usuarios u ON p.usuario_id = u.id
+        ${whereClause}
+        ORDER BY CASE p.estado WHEN 'pendiente' THEN 0 WHEN 'aprobada' THEN 1 ELSE 2 END, p.created_at DESC
+        LIMIT $${pi++} OFFSET $${pi}
+    `, params);
+    return { items: items.rows, total, page, limit, pages: Math.ceil(total / limit) };
+}
+
+async function contarPropuestasPendientes() {
+    await ensureInit();
+    const r = await getPool().query("SELECT COUNT(*) as n FROM propuestas_monumentos WHERE estado = 'pendiente'");
+    return r.rows[0].n;
+}
+
+async function obtenerPropuesta(id) {
+    await ensureInit();
+    const pool = getPool();
+    const propR = await pool.query(`
+        SELECT p.*, u.nombre as usuario_nombre, u.email as usuario_email
+        FROM propuestas_monumentos p
+        LEFT JOIN usuarios u ON p.usuario_id = u.id
+        WHERE p.id = $1
+    `, [id]);
+    if (propR.rows.length === 0) return null;
+    const imagenesR = await pool.query(
+        'SELECT id, nombre, tipo, tamano, url FROM propuestas_imagenes WHERE propuesta_id = $1',
+        [id]
+    );
+    return { ...propR.rows[0], imagenes: imagenesR.rows };
+}
+
+async function actualizarPropuesta(id, data) {
+    await ensureInit();
+    const campos = [];
+    const valores = [];
+    let i = 1;
+    const allowed = ['denominacion', 'tipo', 'categoria', 'provincia', 'comarca', 'municipio', 'localidad', 'latitud', 'longitud', 'comunidad_autonoma', 'pais', 'descripcion', 'estilo', 'material', 'inception', 'arquitecto', 'wikipedia_url'];
+    for (const [key, val] of Object.entries(data)) {
+        if (allowed.includes(key)) {
+            campos.push(`${key} = $${i++}`);
+            valores.push(val);
+        }
+    }
+    if (campos.length === 0) return null;
+    valores.push(id);
+    const result = await getPool().query(`UPDATE propuestas_monumentos SET ${campos.join(', ')} WHERE id = $${i}`, valores);
+    return { changes: result.rowCount };
+}
+
+async function aprobarPropuesta(propuestaId, adminId) {
+    return await transaction(async (client) => {
+        // Get propuesta
+        const propR = await client.query('SELECT * FROM propuestas_monumentos WHERE id = $1', [propuestaId]);
+        if (propR.rows.length === 0) throw new Error('Propuesta no encontrada');
+        const prop = propR.rows[0];
+        if (prop.estado !== 'pendiente') throw new Error('La propuesta ya fue procesada');
+
+        // Insert into bienes
+        const bienR = await client.query(`
+            INSERT INTO bienes (denominacion, tipo, categoria, provincia, comarca, municipio, localidad, latitud, longitud, comunidad_autonoma, pais, fuente_opendata)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,0)
+            RETURNING id
+        `, [prop.denominacion, prop.tipo, prop.categoria, prop.provincia, prop.comarca, prop.municipio, prop.localidad, prop.latitud, prop.longitud, prop.comunidad_autonoma, prop.pais]);
+        const bienId = bienR.rows[0].id;
+
+        // Insert wikidata entry if there's any enrichment data
+        if (prop.descripcion || prop.estilo || prop.material || prop.inception || prop.arquitecto || prop.wikipedia_url) {
+            await client.query(`
+                INSERT INTO wikidata (bien_id, descripcion, estilo, material, inception, arquitecto, wikipedia_url)
+                VALUES ($1,$2,$3,$4,$5,$6,$7)
+                ON CONFLICT(bien_id) DO UPDATE SET
+                    descripcion=EXCLUDED.descripcion, estilo=EXCLUDED.estilo, material=EXCLUDED.material,
+                    inception=EXCLUDED.inception, arquitecto=EXCLUDED.arquitecto, wikipedia_url=EXCLUDED.wikipedia_url
+            `, [bienId, prop.descripcion, prop.estilo, prop.material, prop.inception, prop.arquitecto, prop.wikipedia_url]);
+        }
+
+        // Copy images from propuesta to imagenes table
+        const imgsR = await client.query('SELECT * FROM propuestas_imagenes WHERE propuesta_id = $1', [propuestaId]);
+        for (const img of imgsR.rows) {
+            if (img.contenido) {
+                // Uploaded image: store in imagenes with contenido
+                await client.query(
+                    'INSERT INTO imagenes (bien_id, url, titulo, fuente, contenido) VALUES ($1, $2, $3, $4, $5)',
+                    [bienId, `__local__`, img.nombre, 'Propuesta usuario', img.contenido]
+                );
+                // Update the url to point to the served endpoint (we'll update after getting the id)
+                const lastR = await client.query('SELECT id FROM imagenes WHERE bien_id = $1 ORDER BY id DESC LIMIT 1', [bienId]);
+                const imgId = lastR.rows[0].id;
+                await client.query('UPDATE imagenes SET url = $1 WHERE id = $2', [`/api/imagenes/${imgId}/archivo`, imgId]);
+            } else if (img.url) {
+                // External URL image
+                await client.query(
+                    'INSERT INTO imagenes (bien_id, url, titulo, fuente) VALUES ($1, $2, $3, $4)',
+                    [bienId, img.url, img.nombre, 'Propuesta usuario']
+                );
+            }
+        }
+
+        // Update propuesta status
+        await client.query(
+            "UPDATE propuestas_monumentos SET estado = 'aprobada', revisado_por = $1, bien_id = $2, revisado_at = NOW() WHERE id = $3",
+            [adminId, bienId, propuestaId]
+        );
+
+        return bienId;
+    });
+}
+
+async function rechazarPropuesta(propuestaId, adminId, notas) {
+    await ensureInit();
+    const propR = await getPool().query('SELECT estado FROM propuestas_monumentos WHERE id = $1', [propuestaId]);
+    if (propR.rows.length === 0) throw new Error('Propuesta no encontrada');
+    if (propR.rows[0].estado !== 'pendiente') throw new Error('La propuesta ya fue procesada');
+    await getPool().query(
+        "UPDATE propuestas_monumentos SET estado = 'rechazada', notas_admin = $1, revisado_por = $2, revisado_at = NOW() WHERE id = $3",
+        [notas, adminId, propuestaId]
+    );
+}
+
+async function obtenerPropuestaImagen(imgId) {
+    await ensureInit();
+    const r = await getPool().query('SELECT nombre, tipo, contenido FROM propuestas_imagenes WHERE id = $1', [imgId]);
+    return r.rows[0] || null;
+}
+
+async function obtenerImagenArchivo(imgId) {
+    await ensureInit();
+    const r = await getPool().query('SELECT url, titulo, contenido FROM imagenes WHERE id = $1', [imgId]);
+    return r.rows[0] || null;
+}
+
+// =========== Notas Monumento ===========
+
+async function obtenerNotasMonumento(bienId) {
+    await ensureInit();
+    const r = await getPool().query(`
+        SELECT n.*, u.nombre as usuario_nombre, u.email as usuario_email, u.rol as usuario_rol
+        FROM notas_monumento n
+        JOIN usuarios u ON n.usuario_id = u.id
+        WHERE n.bien_id = $1
+        ORDER BY
+            CASE u.rol WHEN 'admin' THEN 1 WHEN 'colaborador' THEN 2 ELSE 3 END,
+            n.created_at DESC
+    `, [bienId]);
+    return r.rows;
+}
+
+async function crearNotaMonumento(bienId, usuarioId, tipo, texto) {
+    await ensureInit();
+    const r = await getPool().query(
+        'INSERT INTO notas_monumento (bien_id, usuario_id, tipo, texto) VALUES ($1, $2, $3, $4) RETURNING *',
+        [bienId, usuarioId, tipo, texto]
+    );
+    return r.rows[0];
+}
+
+async function eliminarNotaMonumento(notaId, usuarioId) {
+    await ensureInit();
+    const r = await getPool().query(
+        'DELETE FROM notas_monumento WHERE id = $1 AND usuario_id = $2 RETURNING *',
+        [notaId, usuarioId]
+    );
+    return r.rows[0];
+}
+
+async function eliminarNotaMonumentoAdmin(notaId) {
+    await ensureInit();
+    const r = await getPool().query('DELETE FROM notas_monumento WHERE id = $1 RETURNING *', [notaId]);
+    return r.rows[0];
+}
+
+// =========== Valoraciones Monumento ===========
+
+async function obtenerValoracionesMonumento(bienId) {
+    await ensureInit();
+    const r = await getPool().query(`
+        SELECT
+            COUNT(*) as total,
+            ROUND(AVG(general)::numeric, 1) as media_general,
+            ROUND(AVG(conservacion)::numeric, 1) as media_conservacion,
+            ROUND(AVG(accesibilidad)::numeric, 1) as media_accesibilidad,
+            COUNT(conservacion) as total_conservacion,
+            COUNT(accesibilidad) as total_accesibilidad
+        FROM valoraciones_monumento
+        WHERE bien_id = $1
+    `, [bienId]);
+    const summary = r.rows[0];
+    return {
+        total: parseInt(summary.total),
+        media_general: summary.media_general ? parseFloat(summary.media_general) : null,
+        media_conservacion: summary.media_conservacion ? parseFloat(summary.media_conservacion) : null,
+        media_accesibilidad: summary.media_accesibilidad ? parseFloat(summary.media_accesibilidad) : null,
+        total_conservacion: parseInt(summary.total_conservacion),
+        total_accesibilidad: parseInt(summary.total_accesibilidad),
+    };
+}
+
+async function obtenerValoracionUsuario(bienId, usuarioId) {
+    await ensureInit();
+    const r = await getPool().query(
+        'SELECT * FROM valoraciones_monumento WHERE bien_id = $1 AND usuario_id = $2',
+        [bienId, usuarioId]
+    );
+    return r.rows[0] || null;
+}
+
+async function upsertValoracion(bienId, usuarioId, general, conservacion, accesibilidad) {
+    await ensureInit();
+    const r = await getPool().query(`
+        INSERT INTO valoraciones_monumento (bien_id, usuario_id, general, conservacion, accesibilidad)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (bien_id, usuario_id) DO UPDATE SET
+            general = EXCLUDED.general,
+            conservacion = EXCLUDED.conservacion,
+            accesibilidad = EXCLUDED.accesibilidad,
+            updated_at = NOW()
+        RETURNING *
+    `, [bienId, usuarioId, general, conservacion || null, accesibilidad || null]);
+    return r.rows[0];
+}
+
+// =========== Rutas ===========
+
+async function crearRuta(usuarioId, nombre, centroLat, centroLng, radioKm) {
+    await ensureInit();
+    const r = await getPool().query(
+        'INSERT INTO rutas_usuario (usuario_id, nombre, centro_lat, centro_lng, radio_km) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+        [usuarioId, nombre, centroLat, centroLng, radioKm]
+    );
+    return r.rows[0];
+}
+
+async function obtenerRutasUsuario(usuarioId) {
+    await ensureInit();
+    const r = await getPool().query(`
+        SELECT r.*, COUNT(p.id) as num_paradas
+        FROM rutas_usuario r
+        LEFT JOIN rutas_paradas p ON r.id = p.ruta_id
+        WHERE r.usuario_id = $1
+        GROUP BY r.id
+        ORDER BY r.created_at DESC
+    `, [usuarioId]);
+    return r.rows;
+}
+
+async function obtenerRuta(rutaId) {
+    await ensureInit();
+    const ruta = await getPool().query('SELECT * FROM rutas_usuario WHERE id = $1', [rutaId]);
+    if (!ruta.rows[0]) return null;
+    const paradas = await getPool().query(`
+        SELECT p.*, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.latitud, b.longitud, b.categoria,
+               w.imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url
+        FROM rutas_paradas p
+        JOIN bienes b ON p.bien_id = b.id
+        LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE p.ruta_id = $1
+        ORDER BY p.orden
+    `, [rutaId]);
+    return { ...ruta.rows[0], paradas: paradas.rows };
+}
+
+async function guardarParadasRuta(rutaId, paradas) {
+    await ensureInit();
+    // Delete existing and insert new
+    await getPool().query('DELETE FROM rutas_paradas WHERE ruta_id = $1', [rutaId]);
+    for (const p of paradas) {
+        await getPool().query(
+            'INSERT INTO rutas_paradas (ruta_id, bien_id, orden, notas) VALUES ($1,$2,$3,$4)',
+            [rutaId, p.bien_id, p.orden, p.notas || null]
+        );
+    }
+}
+
+async function eliminarRuta(rutaId, usuarioId) {
+    await ensureInit();
+    const r = await getPool().query(
+        'DELETE FROM rutas_usuario WHERE id = $1 AND usuario_id = $2 RETURNING *',
+        [rutaId, usuarioId]
+    );
+    return r.rows[0];
+}
+
+// =========== Social History ===========
+
+async function obtenerSocialHistoryIds(days = 90) {
+    await ensureInit();
+    const r = await getPool().query(
+        `SELECT DISTINCT bien_id FROM social_history WHERE created_at > NOW() - INTERVAL '${parseInt(days)} days'`
+    );
+    return r.rows.map(row => row.bien_id);
+}
+
+async function crearSocialHistory(bienId, platform) {
+    await ensureInit();
+    const r = await getPool().query(
+        'INSERT INTO social_history (bien_id, platform) VALUES ($1, $2) RETURNING *',
+        [bienId, platform]
+    );
+    return r.rows[0];
+}
+
 // =========== Cerrar ===========
 
 async function cerrar() {
@@ -940,5 +1406,30 @@ module.exports = {
     obtenerRegistrosPorTiempo,
     obtenerLoginsPorDia,
     obtenerUsuariosMasActivos,
+    crearPropuesta,
+    insertarPropuestaImagen,
+    obtenerMisPropuestas,
+    obtenerPropuestasAdmin,
+    contarPropuestasPendientes,
+    obtenerPropuesta,
+    actualizarPropuesta,
+    aprobarPropuesta,
+    rechazarPropuesta,
+    obtenerPropuestaImagen,
+    obtenerImagenArchivo,
+    obtenerNotasMonumento,
+    crearNotaMonumento,
+    eliminarNotaMonumento,
+    eliminarNotaMonumentoAdmin,
+    obtenerValoracionesMonumento,
+    obtenerValoracionUsuario,
+    upsertValoracion,
+    crearRuta,
+    obtenerRutasUsuario,
+    obtenerRuta,
+    guardarParadasRuta,
+    eliminarRuta,
+    obtenerSocialHistoryIds,
+    crearSocialHistory,
     cerrar,
 };
