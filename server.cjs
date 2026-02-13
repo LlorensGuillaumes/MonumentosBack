@@ -1466,6 +1466,54 @@ app.post('/api/email/cancel', (req, res) => {
     res.json({ ok: true, message: 'No hay envío en curso' });
 });
 
+// ============== CONTACT FORM ==============
+
+/**
+ * POST /api/contact
+ * Recibe un formulario de contacto y envía email al admin
+ */
+app.post('/api/contact', upload.array('archivos', 5), async (req, res) => {
+    try {
+        const { email, asunto, mensaje } = req.body;
+        const gmailUser = process.env.GMAIL_USER;
+        const gmailPass = process.env.GMAIL_PASS;
+
+        if (!email || !asunto || !mensaje) {
+            return res.status(400).json({ error: 'Email, asunto y mensaje son obligatorios' });
+        }
+        if (!gmailUser || !gmailPass) {
+            return res.status(500).json({ error: 'Configuración de email no disponible en el servidor' });
+        }
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: gmailUser, pass: gmailPass },
+        });
+
+        const attachments = (req.files || []).map(f => ({
+            filename: f.originalname,
+            content: f.buffer,
+        }));
+
+        await transporter.sendMail({
+            from: gmailUser,
+            to: gmailUser,
+            replyTo: email,
+            subject: `[Contacto Web] ${asunto}`,
+            text: `De: ${email}\n\n${mensaje}`,
+            html: `<p><strong>De:</strong> ${email}</p><hr/><p>${mensaje.replace(/\n/g, '<br>')}</p>`,
+            attachments,
+        });
+
+        transporter.close();
+        console.log(`[Contact] Email recibido de ${email}: "${asunto}"`);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[Contact] Error:', err.message);
+        res.status(500).json({ error: 'Error al enviar el mensaje' });
+    }
+});
+
 // ============== WIKIPEDIA ENRICHMENT ==============
 
 /**
@@ -1561,4 +1609,5 @@ app.listen(PORT, () => {
     console.log(`  POST /api/favoritos/:id    - Añadir favorito`);
     console.log(`  DELETE /api/favoritos/:id  - Quitar favorito`);
     console.log(`  GET  /api/monumentos/:id/wikipedia - Extracto Wikipedia`);
+    console.log(`  POST /api/contact              - Formulario de contacto`);
 });
