@@ -2,6 +2,7 @@
  * API REST para Patrimonio Europeo
  * Endpoints para acceder a los datos de monumentos desde el frontend
  */
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
