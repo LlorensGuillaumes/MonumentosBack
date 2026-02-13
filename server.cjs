@@ -576,7 +576,7 @@ app.get('/api/monumentos', async (req, res) => {
             params.push(`%${req.query.estilo}%`);
         }
         if (req.query.q) {
-            where.push(`b.denominacion ILIKE $${pi++}`);
+            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
             params.push(`%${req.query.q}%`);
         }
         if (req.query.solo_coords === 'true') {

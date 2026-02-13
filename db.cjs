@@ -36,6 +36,8 @@ function pgParams(sql) {
 async function inicializarTablas() {
     const pool = getPool();
 
+    await pool.query('CREATE EXTENSION IF NOT EXISTS unaccent');
+
     await pool.query(`
         CREATE TABLE IF NOT EXISTS bienes (
             id SERIAL PRIMARY KEY,
