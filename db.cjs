@@ -158,6 +158,25 @@ async function inicializarTablas() {
             login_at TIMESTAMPTZ DEFAULT NOW(),
             method TEXT DEFAULT 'email'
         );
+
+        CREATE TABLE IF NOT EXISTS mensajes_contacto (
+            id SERIAL PRIMARY KEY,
+            email TEXT NOT NULL,
+            asunto TEXT NOT NULL,
+            mensaje TEXT NOT NULL,
+            leido BOOLEAN DEFAULT FALSE,
+            respondido BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS mensajes_archivos (
+            id SERIAL PRIMARY KEY,
+            mensaje_id INTEGER NOT NULL REFERENCES mensajes_contacto(id) ON DELETE CASCADE,
+            nombre TEXT NOT NULL,
+            tipo TEXT,
+            tamano INTEGER,
+            contenido BYTEA
+        );
     `);
 
     await pool.query(`
@@ -181,6 +200,8 @@ async function inicializarTablas() {
         CREATE INDEX IF NOT EXISTS idx_favoritos_usuario ON favoritos(usuario_id);
         CREATE INDEX IF NOT EXISTS idx_favoritos_bien ON favoritos(bien_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_bienes_pais_ccaa_codigo ON bienes(pais, comunidad_autonoma, codigo_fuente);
+        CREATE INDEX IF NOT EXISTS idx_mensajes_created ON mensajes_contacto(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_mensajes_archivos_msg ON mensajes_archivos(mensaje_id);
     `);
 
     _initialized = true;

@@ -1471,47 +1471,179 @@ app.post('/api/email/cancel', (req, res) => {
 
 /**
  * POST /api/contact
- * Recibe un formulario de contacto y envía email al admin
+ * Guarda un mensaje de contacto en la base de datos
  */
 app.post('/api/contact', upload.array('archivos', 5), async (req, res) => {
     try {
         const { email, asunto, mensaje } = req.body;
-        const gmailUser = process.env.GMAIL_USER;
-        const gmailPass = process.env.GMAIL_PASS;
 
         if (!email || !asunto || !mensaje) {
             return res.status(400).json({ error: 'Email, asunto y mensaje son obligatorios' });
         }
-        if (!gmailUser || !gmailPass) {
-            return res.status(500).json({ error: 'Configuración de email no disponible en el servidor' });
+
+        const result = await db.query(
+            'INSERT INTO mensajes_contacto (email, asunto, mensaje) VALUES ($1, $2, $3) RETURNING id',
+            [email, asunto, mensaje]
+        );
+        const mensajeId = result.rows[0].id;
+
+        // Guardar archivos adjuntos
+        for (const f of (req.files || [])) {
+            await db.query(
+                'INSERT INTO mensajes_archivos (mensaje_id, nombre, tipo, tamano, contenido) VALUES ($1, $2, $3, $4, $5)',
+                [mensajeId, f.originalname, f.mimetype, f.size, f.buffer]
+            );
         }
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: { user: gmailUser, pass: gmailPass },
-        });
-
-        const attachments = (req.files || []).map(f => ({
-            filename: f.originalname,
-            content: f.buffer,
-        }));
-
-        await transporter.sendMail({
-            from: gmailUser,
-            to: gmailUser,
-            replyTo: email,
-            subject: `[Contacto Web] ${asunto}`,
-            text: `De: ${email}\n\n${mensaje}`,
-            html: `<p><strong>De:</strong> ${email}</p><hr/><p>${mensaje.replace(/\n/g, '<br>')}</p>`,
-            attachments,
-        });
-
-        transporter.close();
-        console.log(`[Contact] Email recibido de ${email}: "${asunto}"`);
+        console.log(`[Contact] Mensaje guardado de ${email}: "${asunto}" (${(req.files || []).length} adjuntos)`);
         res.json({ ok: true });
     } catch (err) {
         console.error('[Contact] Error:', err.message);
-        res.status(500).json({ error: 'Error al enviar el mensaje' });
+        res.status(500).json({ error: 'Error al guardar el mensaje' });
+    }
+});
+
+// ============== ADMIN: MENSAJES ==============
+
+/**
+ * GET /api/admin/mensajes
+ * Lista de mensajes de contacto (paginado)
+ */
+app.get('/api/admin/mensajes', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        const offset = (page - 1) * limit;
+
+        let where = [];
+        let params = [];
+        let pi = 1;
+
+        if (req.query.leido === 'true') { where.push(`leido = TRUE`); }
+        if (req.query.leido === 'false') { where.push(`leido = FALSE`); }
+
+        const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+        const countR = await db.query(`SELECT COUNT(*) as n FROM mensajes_contacto ${whereClause}`, params);
+        const total = countR.rows[0].n;
+
+        params.push(limit, offset);
+        const itemsR = await db.query(`
+            SELECT m.*,
+                   (SELECT COUNT(*) FROM mensajes_archivos WHERE mensaje_id = m.id) as num_archivos
+            FROM mensajes_contacto m
+            ${whereClause}
+            ORDER BY m.created_at DESC
+            LIMIT $${pi++} OFFSET $${pi}
+        `, params);
+
+        res.json({
+            page, limit, total,
+            total_pages: Math.ceil(total / limit),
+            items: itemsR.rows,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/mensajes/count
+ * Número de mensajes no leídos
+ */
+app.get('/api/admin/mensajes/count', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const r = await db.query('SELECT COUNT(*) as n FROM mensajes_contacto WHERE leido = FALSE');
+        res.json({ unread: r.rows[0].n });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/mensajes/:id
+ * Detalle de un mensaje con info de archivos
+ */
+app.get('/api/admin/mensajes/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const msgR = await db.query('SELECT * FROM mensajes_contacto WHERE id = $1', [id]);
+        if (msgR.rows.length === 0) return res.status(404).json({ error: 'Mensaje no encontrado' });
+
+        const archivosR = await db.query(
+            'SELECT id, nombre, tipo, tamano FROM mensajes_archivos WHERE mensaje_id = $1',
+            [id]
+        );
+
+        // Marcar como leído automáticamente
+        if (!msgR.rows[0].leido) {
+            await db.query('UPDATE mensajes_contacto SET leido = TRUE WHERE id = $1', [id]);
+        }
+
+        res.json({ ...msgR.rows[0], leido: true, archivos: archivosR.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * PATCH /api/admin/mensajes/:id
+ * Actualizar estado de un mensaje (leido, respondido)
+ */
+app.patch('/api/admin/mensajes/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const sets = [];
+        const params = [];
+        let pi = 1;
+
+        if (req.body.leido !== undefined) { sets.push(`leido = $${pi++}`); params.push(!!req.body.leido); }
+        if (req.body.respondido !== undefined) { sets.push(`respondido = $${pi++}`); params.push(!!req.body.respondido); }
+
+        if (sets.length === 0) return res.status(400).json({ error: 'Sin campos para actualizar' });
+
+        params.push(id);
+        await db.query(`UPDATE mensajes_contacto SET ${sets.join(', ')} WHERE id = $${pi}`, params);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/admin/mensajes/:id
+ * Eliminar un mensaje y sus archivos
+ */
+app.delete('/api/admin/mensajes/:id', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        await db.query('DELETE FROM mensajes_contacto WHERE id = $1', [id]);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/mensajes/:id/archivos/:archivoId
+ * Descargar un archivo adjunto
+ */
+app.get('/api/admin/mensajes/:id/archivos/:archivoId', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const archivoId = parseInt(req.params.archivoId);
+        const mensajeId = parseInt(req.params.id);
+        const r = await db.query(
+            'SELECT nombre, tipo, contenido FROM mensajes_archivos WHERE id = $1 AND mensaje_id = $2',
+            [archivoId, mensajeId]
+        );
+        if (r.rows.length === 0) return res.status(404).json({ error: 'Archivo no encontrado' });
+
+        const archivo = r.rows[0];
+        res.setHeader('Content-Disposition', `attachment; filename="${archivo.nombre}"`);
+        res.setHeader('Content-Type', archivo.tipo || 'application/octet-stream');
+        res.send(archivo.contenido);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
