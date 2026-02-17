@@ -6,6 +6,8 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
@@ -24,8 +26,83 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'patrimonio-europeo-secret-key-2026';
 const JWT_EXPIRES_IN = '30d';
 
-// Middleware
-app.use(cors());
+// ============== SECURITY MIDDLEWARE ==============
+
+// CORS whitelist
+const ALLOWED_ORIGINS = [
+    'https://shiny-licorice-a01ea4.netlify.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []),
+];
+
+// Block unauthorized origins (server-side enforcement, not just CORS headers)
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+        return res.status(403).json({ error: 'Origin not allowed' });
+    }
+    next();
+});
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        callback(null, false);
+    },
+}));
+
+// Security headers (disable CSP and COEP for JSON API compatibility)
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+}));
+
+// Anti-bot: block known scraper user-agents
+const BLOCKED_UA = /scrapy|python-urllib|wget|go-http-client|java\/|libwww-perl|httpclient|httpunit|phpcrawl/i;
+app.use((req, res, next) => {
+    const ua = req.headers['user-agent'] || '';
+    if (BLOCKED_UA.test(ua)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+});
+
+// Rate limiting — general: 100 req/min per IP
+const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Try again in a minute.' },
+});
+app.use('/api', generalLimiter);
+
+// Rate limiting — bulk data endpoints: 30 req/min per IP
+const dataLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many data requests. Try again in a minute.' },
+});
+app.use('/api/monumentos', dataLimiter);
+app.use('/api/geojson', dataLimiter);
+app.use('/api/ccaa-resumen', dataLimiter);
+app.use('/api/municipios', dataLimiter);
+
+// Rate limiting — auth endpoints: 10 req/min per IP
+const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many auth attempts. Try again in a minute.' },
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+
 app.use(express.json());
 
 // ============== CLASIFICACION DE MONUMENTOS ==============
@@ -850,7 +927,7 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/monumentos', async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 50));
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
         const offset = (page - 1) * limit;
 
         let where = [];
@@ -1176,7 +1253,7 @@ app.get('/api/geojson', async (req, res) => {
             }
         }
 
-        const limit = Math.min(10000, parseInt(req.query.limit) || 10000);
+        const limit = Math.min(2000, parseInt(req.query.limit) || 2000);
 
         let orderBy = '';
         if (req.query.bbox) {
