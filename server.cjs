@@ -28,6 +28,34 @@ const JWT_EXPIRES_IN = '30d';
 app.use(cors());
 app.use(express.json());
 
+// ============== CLASIFICACION DE MONUMENTOS ==============
+
+const CLASIFICACION_GRUPOS = {
+    religiosa: ['Iglesia / Ermita', 'Catedral', 'Monasterio / Convento', 'Arte religioso', 'Mezquita / Sinagoga', 'Cruz / Crucero'],
+    militar: ['Castillo / Fortaleza', 'Torre', 'Muralla'],
+    civil: ['Edificio civil', 'Palacio', 'Casa señorial / Mansión', 'Teatro', 'Museo', 'Monumento conmemorativo'],
+    arqueologica: ['Yacimiento arqueológico', 'Megalítico'],
+    etnologica: ['Arquitectura rural', 'Molino', 'Patrimonio industrial'],
+    infraestructura: ['Puente', 'Acueducto', 'Fuente', 'Faro', 'Obra hidráulica', 'Plaza de toros', 'Cementerio', 'Balneario / Termas'],
+};
+
+const ALL_CLASSIFIED_TIPOS = Object.values(CLASIFICACION_GRUPOS).flat();
+
+function applyClasificacionFilter(clasificacion, where, params, piRef) {
+    if (clasificacion === 'otros') {
+        const placeholders = ALL_CLASSIFIED_TIPOS.map(() => `$${piRef.value++}`);
+        where.push(`(b.tipo_monumento IS NULL OR b.tipo_monumento NOT IN (${placeholders.join(',')}))`);
+        params.push(...ALL_CLASSIFIED_TIPOS);
+        return;
+    }
+    const valores = CLASIFICACION_GRUPOS[clasificacion];
+    if (valores && valores.length) {
+        const placeholders = valores.map(() => `$${piRef.value++}`);
+        where.push(`b.tipo_monumento IN (${placeholders.join(',')})`);
+        params.push(...valores);
+    }
+}
+
 // ============== AUTH MIDDLEWARE ==============
 
 function authMiddleware(req, res, next) {
@@ -304,8 +332,9 @@ app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, async (req, res)
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
         const search = req.query.search || undefined;
         const rol = req.query.rol || undefined;
+        const premium = req.query.premium || undefined;
 
-        const result = await db.obtenerUsuarios({ page, limit, search, rol });
+        const result = await db.obtenerUsuarios({ page, limit, search, rol, premium });
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -334,6 +363,40 @@ app.patch('/api/admin/usuarios/:id/rol', authMiddleware, adminMiddleware, async 
         }
 
         await db.actualizarUsuario(userId, { rol });
+        const updated = await db.obtenerUsuarioPorId(userId);
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * PATCH /api/admin/usuarios/:id/premium
+ * Cambiar estado premium de un usuario (solo admin)
+ */
+app.patch('/api/admin/usuarios/:id/premium', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { premium, premium_hasta } = req.body;
+        if (typeof premium !== 'boolean') {
+            return res.status(400).json({ error: 'El campo premium debe ser true o false' });
+        }
+
+        const userId = parseInt(req.params.id);
+        if (userId === req.user.id) {
+            return res.status(400).json({ error: 'No puedes modificar tu propio estado premium' });
+        }
+
+        const usuario = await db.obtenerUsuarioPorId(userId);
+        if (!usuario) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const updateData = { premium };
+        if (premium_hasta !== undefined) {
+            updateData.premium_hasta = premium_hasta;
+        }
+
+        await db.actualizarUsuario(userId, updateData);
         const updated = await db.obtenerUsuarioPorId(userId);
         res.json(updated);
     } catch (err) {
@@ -596,6 +659,19 @@ app.get('/api/monumentos', async (req, res) => {
             where.push(`w.estilo ILIKE $${pi++}`);
             params.push(`%${req.query.estilo}%`);
         }
+        if (req.query.tipo_monumento) {
+            where.push(`b.tipo_monumento = $${pi++}`);
+            params.push(req.query.tipo_monumento);
+        }
+        if (req.query.clasificacion && (CLASIFICACION_GRUPOS[req.query.clasificacion] || req.query.clasificacion === 'otros')) {
+            const piRef = { value: pi };
+            applyClasificacionFilter(req.query.clasificacion, where, params, piRef);
+            pi = piRef.value;
+        }
+        if (req.query.periodo) {
+            where.push(`b.periodo = $${pi++}`);
+            params.push(req.query.periodo);
+        }
         if (req.query.q) {
             where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
             params.push(`%${req.query.q}%`);
@@ -640,16 +716,19 @@ app.get('/api/monumentos', async (req, res) => {
                         b.id, b.denominacion, b.tipo, b.clase, b.categoria,
                         b.provincia, b.comarca, b.municipio, b.localidad,
                         b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
-                        w.qid, w.descripcion, w.imagen_url, w.estilo, w.arquitecto,
+                        b.tipo_monumento, b.periodo,
+                        w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                         w.heritage_label, w.wikipedia_url,
                         ${RELEVANCE_SCORE} as _score,
                         ROW_NUMBER() OVER (PARTITION BY b.pais ORDER BY ${RELEVANCE_SCORE} DESC, LOWER(b.denominacion)) as country_rank
                     FROM bienes b
                     LEFT JOIN wikidata w ON b.id = w.bien_id
+                    LEFT JOIN LATERAL (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1) img ON true
                     ${whereClause}
                 )
                 SELECT id, denominacion, tipo, clase, categoria, provincia, comarca,
                        municipio, localidad, latitud, longitud, comunidad_autonoma, pais,
+                       tipo_monumento, periodo,
                        qid, descripcion, imagen_url, estilo, arquitecto, heritage_label, wikipedia_url
                 FROM scored
                 ORDER BY country_rank, _score DESC, LOWER(denominacion)
@@ -661,10 +740,12 @@ app.get('/api/monumentos', async (req, res) => {
                     b.id, b.denominacion, b.tipo, b.clase, b.categoria,
                     b.provincia, b.comarca, b.municipio, b.localidad,
                     b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
-                    w.qid, w.descripcion, w.imagen_url, w.estilo, w.arquitecto,
+                    b.tipo_monumento, b.periodo,
+                    w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                     w.heritage_label, w.wikipedia_url
                 FROM bienes b
                 LEFT JOIN wikidata w ON b.id = w.bien_id
+                LEFT JOIN LATERAL (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1) img ON true
                 ${whereClause}
                 ORDER BY ${SORT_OPTIONS[sortKey] || SORT_OPTIONS['relevancia']}
                 LIMIT $${pi++} OFFSET $${pi}
@@ -712,11 +793,20 @@ app.get('/api/monumentos/radio', async (req, res) => {
             extraWhere += ` AND b.categoria ILIKE $${pi++}`;
             extraParams.push(`%${req.query.categoria}%`);
         }
+        if (req.query.tipo_monumento) {
+            extraWhere += ` AND b.tipo_monumento = $${pi++}`;
+            extraParams.push(req.query.tipo_monumento);
+        }
+        if (req.query.periodo) {
+            extraWhere += ` AND b.periodo = $${pi++}`;
+            extraParams.push(req.query.periodo);
+        }
 
         const result = await db.query(`
             SELECT b.id, b.denominacion, b.categoria, b.municipio, b.provincia, b.pais,
                    b.latitud, b.longitud, b.comunidad_autonoma,
-                   w.imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url,
+                   b.tipo_monumento, b.periodo,
+                   COALESCE(w.imagen_url, img.url) as imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url,
                    (6371 * acos(
                        cos(radians($1)) * cos(radians(b.latitud)) *
                        cos(radians(b.longitud) - radians($2)) +
@@ -724,6 +814,7 @@ app.get('/api/monumentos/radio', async (req, res) => {
                    )) AS distancia_km
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
+            LEFT JOIN LATERAL (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1) img ON true
             WHERE b.latitud IS NOT NULL AND b.longitud IS NOT NULL
               AND (6371 * acos(
                   cos(radians($1)) * cos(radians(b.latitud)) *
@@ -804,6 +895,49 @@ app.get('/api/geojson', async (req, res) => {
             where.push(`b.comunidad_autonoma = $${pi++}`);
             params.push(req.query.region);
         }
+        if (req.query.provincia) {
+            where.push(`b.provincia = $${pi++}`);
+            params.push(req.query.provincia);
+        }
+        if (req.query.municipio) {
+            where.push(`b.municipio = $${pi++}`);
+            params.push(req.query.municipio);
+        }
+        if (req.query.categoria) {
+            where.push(`b.categoria ILIKE $${pi++}`);
+            params.push(`%${req.query.categoria}%`);
+        }
+        if (req.query.tipo) {
+            where.push(`b.tipo ILIKE $${pi++}`);
+            params.push(`%${req.query.tipo}%`);
+        }
+        if (req.query.estilo) {
+            where.push(`w.estilo ILIKE $${pi++}`);
+            params.push(`%${req.query.estilo}%`);
+        }
+        if (req.query.tipo_monumento) {
+            where.push(`b.tipo_monumento = $${pi++}`);
+            params.push(req.query.tipo_monumento);
+        }
+        if (req.query.clasificacion && (CLASIFICACION_GRUPOS[req.query.clasificacion] || req.query.clasificacion === 'otros')) {
+            const piRef = { value: pi };
+            applyClasificacionFilter(req.query.clasificacion, where, params, piRef);
+            pi = piRef.value;
+        }
+        if (req.query.periodo) {
+            where.push(`b.periodo = $${pi++}`);
+            params.push(req.query.periodo);
+        }
+        if (req.query.q) {
+            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+            params.push(`%${req.query.q}%`);
+        }
+        if (req.query.solo_coords === 'true') {
+            where.push('b.latitud IS NOT NULL');
+        }
+        if (req.query.solo_wikidata === 'true') {
+            where.push('w.qid IS NOT NULL');
+        }
         if (req.query.solo_imagen === 'true') {
             where.push('w.imagen_url IS NOT NULL');
         }
@@ -836,7 +970,7 @@ app.get('/api/geojson', async (req, res) => {
             SELECT
                 b.id, b.denominacion, b.tipo, b.categoria,
                 b.municipio, b.provincia, b.comunidad_autonoma, b.pais,
-                b.latitud, b.longitud,
+                b.latitud, b.longitud, b.tipo_monumento, b.periodo,
                 w.qid, w.imagen_url, w.estilo
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
@@ -867,6 +1001,8 @@ app.get('/api/geojson', async (req, res) => {
                     qid: item.qid,
                     imagen: item.imagen_url,
                     estilo: item.estilo,
+                    tipo_monumento: item.tipo_monumento,
+                    periodo: item.periodo,
                 },
             })),
         };
@@ -973,6 +1109,22 @@ app.get('/api/filtros', async (req, res) => {
             value: e.value.charAt(0).toUpperCase() + e.value.slice(1),
         }));
 
+        // Tipos de monumento filtrados (clasificación enriquecida)
+        const tiposMonumentoR = await db.query(`
+            SELECT b.tipo_monumento as value, COUNT(*) as count
+            FROM bienes b
+            WHERE b.tipo_monumento IS NOT NULL AND ${whereClause}
+            GROUP BY b.tipo_monumento ORDER BY count DESC
+        `, whereParams);
+
+        // Periodos filtrados
+        const periodosR = await db.query(`
+            SELECT b.periodo as value, COUNT(*) as count
+            FROM bienes b
+            WHERE b.periodo IS NOT NULL AND ${whereClause}
+            GROUP BY b.periodo ORDER BY count DESC
+        `, whereParams);
+
         // Municipios filtrados (solo si hay al menos un filtro geográfico para evitar queries masivas)
         let municipiosR;
         if (pais || region || provincia) {
@@ -996,6 +1148,8 @@ app.get('/api/filtros', async (req, res) => {
             categorias: categoriasR.rows,
             tipos: tiposR.rows,
             estilos,
+            tipos_monumento: tiposMonumentoR.rows,
+            periodos: periodosR.rows,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -311,6 +311,14 @@ async function inicializarTablas() {
         await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS premium_hasta TIMESTAMPTZ`);
     } catch (e) { /* columns may already exist */ }
 
+    // Add tipo_monumento and periodo columns to bienes
+    try {
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS tipo_monumento TEXT`);
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS periodo TEXT`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_bienes_tipo_monumento ON bienes(tipo_monumento)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_bienes_periodo ON bienes(periodo)`);
+    } catch (e) { /* columns may already exist */ }
+
     _initialized = true;
 }
 
@@ -728,7 +736,7 @@ async function actualizarUsuario(id, data) {
     return { changes: result.rowCount };
 }
 
-async function obtenerUsuarios({ page = 1, limit = 50, search, rol } = {}) {
+async function obtenerUsuarios({ page = 1, limit = 50, search, rol, premium } = {}) {
     await ensureInit();
     const pool = getPool();
     let where = [];
@@ -743,6 +751,13 @@ async function obtenerUsuarios({ page = 1, limit = 50, search, rol } = {}) {
         where.push(`u.rol = $${i++}`);
         params.push(rol);
     }
+    if (premium === 'active') {
+        where.push(`u.premium = true AND (u.premium_hasta IS NULL OR u.premium_hasta > NOW())`);
+    } else if (premium === 'expired') {
+        where.push(`u.premium = true AND u.premium_hasta <= NOW()`);
+    } else if (premium === 'free') {
+        where.push(`(u.premium = false OR u.premium IS NULL)`);
+    }
     const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const offset = (page - 1) * limit;
 
@@ -752,6 +767,7 @@ async function obtenerUsuarios({ page = 1, limit = 50, search, rol } = {}) {
     const allParams = [...params, limit, offset];
     const items = await pool.query(
         `SELECT u.id, u.email, u.nombre, u.idioma_por_defecto, u.google_id, u.avatar_url, u.rol,
+                u.premium, u.premium_hasta,
                 CASE WHEN u.password_hash IS NOT NULL THEN 1 ELSE 0 END as has_password,
                 u.created_at, u.last_login,
                 COALESCE(ls.total_logins, 0) as total_logins,
@@ -796,7 +812,10 @@ async function obtenerAnalyticsSummary() {
         nuevosSemana,
         nuevosMes,
         porRol,
-        porMetodo
+        porMetodo,
+        premiumActivos,
+        premiumExpirados,
+        premiumFree
     ] = await Promise.all([
         pool.query('SELECT COUNT(*) as n FROM usuarios'),
         pool.query(`SELECT COUNT(DISTINCT usuario_id) as n FROM login_history WHERE login_at >= CURRENT_DATE`),
@@ -806,6 +825,9 @@ async function obtenerAnalyticsSummary() {
         pool.query(`SELECT COUNT(*) as n FROM usuarios WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'`),
         pool.query(`SELECT rol, COUNT(*) as n FROM usuarios GROUP BY rol ORDER BY n DESC`),
         pool.query(`SELECT method, COUNT(*) as n FROM login_history GROUP BY method ORDER BY n DESC`),
+        pool.query(`SELECT COUNT(*) as n FROM usuarios WHERE premium = true AND (premium_hasta IS NULL OR premium_hasta > NOW())`),
+        pool.query(`SELECT COUNT(*) as n FROM usuarios WHERE premium = true AND premium_hasta <= NOW()`),
+        pool.query(`SELECT COUNT(*) as n FROM usuarios WHERE premium = false OR premium IS NULL`),
     ]);
     return {
         total_usuarios: totalUsuarios.rows[0].n,
@@ -816,6 +838,9 @@ async function obtenerAnalyticsSummary() {
         nuevos_mes: nuevosMes.rows[0].n,
         por_rol: porRol.rows,
         por_metodo: porMetodo.rows,
+        premium_activos: premiumActivos.rows[0].n,
+        premium_expirados: premiumExpirados.rows[0].n,
+        premium_free: premiumFree.rows[0].n,
     };
 }
 
@@ -1294,10 +1319,11 @@ async function obtenerRuta(rutaId) {
     const paradas = await getPool().query(`
         SELECT p.*, b.denominacion, b.municipio, b.provincia, b.pais,
                b.latitud, b.longitud, b.categoria,
-               w.imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url
+               COALESCE(w.imagen_url, img.url) as imagen_url, w.descripcion, w.estilo, w.inception, w.arquitecto, w.wikipedia_url
         FROM rutas_paradas p
         JOIN bienes b ON p.bien_id = b.id
         LEFT JOIN wikidata w ON b.id = w.bien_id
+        LEFT JOIN LATERAL (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1) img ON true
         WHERE p.ruta_id = $1
         ORDER BY p.orden
     `, [rutaId]);
