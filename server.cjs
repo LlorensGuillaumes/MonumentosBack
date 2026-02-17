@@ -41,6 +41,232 @@ const CLASIFICACION_GRUPOS = {
 
 const ALL_CLASSIFIED_TIPOS = Object.values(CLASIFICACION_GRUPOS).flat();
 
+// ============== NORMALIZACIÓN DE ESTILOS ==============
+// Mapa: valor crudo (lowercase) → valor normalizado en español
+const ESTILO_NORMALIZACION = {
+    // Arquitectura popular
+    'arquitectura popular': 'Arquitectura popular',
+    'arquitetura vernacular': 'Arquitectura popular',
+    'architecture vernaculaire': 'Arquitectura popular',
+    // Barroco
+    'arquitectura barroca': 'Barroco', 'architettura barocca': 'Barroco',
+    'architecture baroque': 'Barroco', 'arquitetura barroca': 'Barroco',
+    'barocco': 'Barroco', 'barroco': 'Barroco', 'arte barocca': 'Barroco',
+    'architettura barocca italiana': 'Barroco', 'barocco siciliano': 'Barroco',
+    'barocco napoletano': 'Barroco', 'barroco español': 'Barroco',
+    'barroco português': 'Barroco', 'barroco joanino': 'Barroco',
+    'barocco a milano': 'Barroco', 'barocco genovese': 'Barroco',
+    'barocco leccese': 'Barroco', 'arquitectura barroca en españa': 'Barroco',
+    'protobarroco': 'Barroco',
+    // Románico
+    'arquitectura románica': 'Románico', 'architettura romanica': 'Románico',
+    'architecture romane': 'Románico', 'arte románico': 'Románico',
+    'arte romanica': 'Románico', 'art roman': 'Románico',
+    'arquitetura românica': 'Románico', 'romanico': 'Románico',
+    'arte românica': 'Románico', 'romanico lombardo': 'Románico',
+    'romanico pisano': 'Románico', 'romanico pugliese': 'Románico',
+    'architettura romanica in italia': 'Románico', 'art roman provençal': 'Románico',
+    'art roman auvergnat': 'Románico', 'art roman lombard': 'Románico',
+    'arquitectura románica en españa': 'Románico', 'arte románico en cataluña': 'Románico',
+    'arte románico en aragón': 'Románico', 'arquitetura românica em portugal': 'Románico',
+    'románico gallego': 'Románico', 'románico asturiano': 'Románico',
+    'romanico fiorentino': 'Románico', 'primer románico': 'Románico',
+    'architettura romanica in sardegna': 'Románico',
+    // Gótico
+    'arquitectura gótica': 'Gótico', 'architettura gotica': 'Gótico',
+    'architecture gothique': 'Gótico', 'arquitetura gótica': 'Gótico',
+    'gotico': 'Gótico', 'estilo gótico': 'Gótico', 'arte gótico': 'Gótico',
+    'escultura gótica': 'Gótico', 'architettura gotica italiana': 'Gótico',
+    'gótico tardío': 'Gótico', 'tardo gotico': 'Gótico',
+    'gótico flamígero': 'Gótico', 'gótico isabelino': 'Gótico',
+    'gothique méridional': 'Gótico', 'gothique flamboyant': 'Gótico',
+    'gótico valenciano': 'Gótico', 'gótico catalán': 'Gótico',
+    'gótico internacional': 'Gótico', 'art gothique': 'Gótico',
+    'gotico spagnolo': 'Gótico', 'gotico chiaramontano': 'Gótico',
+    'gotico catalano': 'Gótico', 'gothique classique': 'Gótico',
+    'gothique rayonnant': 'Gótico', 'architecture gothique française': 'Gótico',
+    'protogótico': 'Gótico', 'gótico inicial': 'Gótico',
+    'gothique catalan': 'Gótico', 'flamboyant': 'Gótico',
+    'architettura gotica in abruzzo': 'Gótico', 'protogotico': 'Gótico',
+    'arquitectura gótica en españa': 'Gótico',
+    // Renacimiento
+    'arquitectura del renacimiento': 'Renacimiento', 'architettura rinascimentale': 'Renacimiento',
+    'architecture de la renaissance': 'Renacimiento', 'renacimiento': 'Renacimiento',
+    'rinascimento': 'Renacimiento', 'arte del rinascimento': 'Renacimiento',
+    'rinascimento italiano': 'Renacimiento', 'renacimiento español': 'Renacimiento',
+    'renaissance': 'Renacimiento', 'renaissance française': 'Renacimiento',
+    'architecture renaissance française': 'Renacimiento', 'style renaissance': 'Renacimiento',
+    'arquitetura do renascimento': 'Renacimiento', 'renascimento': 'Renacimiento',
+    'rinascimento ferrarese': 'Renacimiento', 'rinascimento lombardo': 'Renacimiento',
+    'alto rinascimento': 'Renacimiento', 'arquitectura renacentista española': 'Renacimiento',
+    'arquitectura renacentista de zaragoza': 'Renacimiento',
+    // Neoclásico
+    'arquitectura neoclásica': 'Neoclásico', 'architettura neoclassica': 'Neoclásico',
+    'architecture néoclassique': 'Neoclásico', 'neoclasicismo': 'Neoclásico',
+    'neoclassicismo': 'Neoclásico', 'neoclassicalism': 'Neoclásico',
+    'arquitetura neoclássica': 'Neoclásico', 'neoclassicismo a milano': 'Neoclásico',
+    'néo-classicisme': 'Neoclásico', 'architettura neoclassica italiana': 'Neoclásico',
+    'architecture néoclassique en france': 'Neoclásico', 'architettura classica': 'Neoclásico',
+    'classicisme': 'Neoclásico', 'classicismo': 'Neoclásico',
+    'clasicismo': 'Neoclásico', 'academicismo': 'Neoclásico',
+    // Modernismo / Art Nouveau
+    'arquitectura modernista': 'Modernismo', 'architettura art nouveau': 'Modernismo',
+    'architecture art nouveau': 'Modernismo', 'arquitectura art nouveau': 'Modernismo',
+    'arquitetura modernista': 'Modernismo', 'modernismo': 'Modernismo',
+    'modernismo catalán': 'Modernismo', 'modernismo valenciano': 'Modernismo',
+    'stile liberty': 'Modernismo', 'liberty a milano': 'Modernismo',
+    'modernismo em portugal': 'Modernismo', 'architettura liberty in italia': 'Modernismo',
+    'arquitectura modernista del bajo aragón': 'Modernismo',
+    // Ecléctico
+    'ecléctico': 'Ecléctico', 'eclettismo': 'Ecléctico',
+    'eclecticismo': 'Ecléctico', 'éclectisme': 'Ecléctico',
+    'arquitetura eclética': 'Ecléctico', 'architettura eclettica': 'Ecléctico',
+    'éclectisme égyptien': 'Ecléctico',
+    // Mudéjar
+    'arquitectura mudéjar': 'Mudéjar', 'arte mudéjar': 'Mudéjar',
+    'neomudéjar': 'Mudéjar', 'arquitectura mudéjar de aragón': 'Mudéjar',
+    // Medieval
+    'arquitectura medieval': 'Medieval', 'architettura medievale': 'Medieval',
+    'architecture médiévale': 'Medieval', 'arquitetura da idade média': 'Medieval',
+    'medioevo': 'Medieval',
+    // Manierismo
+    'manierismo': 'Manierismo', 'maneirismo': 'Manierismo',
+    'architettura manierista': 'Manierismo', 'arquitectura maneirista': 'Manierismo',
+    'arquitectura manierista': 'Manierismo', 'architecture maniériste': 'Manierismo',
+    // Art Déco
+    'art déco': 'Art Déco', 'arquitectura art déco': 'Art Déco',
+    'architecture art déco': 'Art Déco', 'art déco valenciano': 'Art Déco',
+    // Racionalismo
+    'racionalismo': 'Racionalismo', 'razionalismo italiano': 'Racionalismo',
+    'razionalismo lariano': 'Racionalismo', 'racionalismo valenciano': 'Racionalismo',
+    'fonctionnalisme': 'Racionalismo', 'funcionalismo': 'Racionalismo',
+    // Movimiento Moderno
+    'movimiento moderno': 'Movimiento Moderno', 'movimento moderno': 'Movimiento Moderno',
+    'mouvement moderne': 'Movimiento Moderno', 'arquitectura moderna': 'Movimiento Moderno',
+    // Historicismo
+    'arquitectura historicista': 'Historicismo', 'arquitetura historicista': 'Historicismo',
+    'historicismo': 'Historicismo',
+    // Rococó
+    'rococó': 'Rococó', 'rococò': 'Rococó', 'architettura rococò': 'Rococó',
+    'arquitetura rococó': 'Rococó', 'arquitectura rococó': 'Rococó', 'rococo': 'Rococó',
+    // Neogótico
+    'arquitectura neogótica': 'Neogótico', 'architettura neogotica': 'Neogótico',
+    'style néogothique': 'Neogótico', 'neogótico': 'Neogótico',
+    // Neorrománico
+    'architettura neoromanica': 'Neorrománico', 'style néo-roman': 'Neorrománico',
+    'neorromânico': 'Neorrománico',
+    // Neobarroco
+    'neobarroco': 'Neobarroco', 'architettura neobarocca': 'Neobarroco',
+    // Neorrenacentista
+    'architettura neorinascimentale': 'Neorrenacentista',
+    'architecture néo-renaissance': 'Neorrenacentista',
+    // Prerrománico
+    'arquitectura prerrománica': 'Prerrománico', 'arte prerrománico': 'Prerrománico',
+    'architettura preromanica': 'Prerrománico', 'art préroman': 'Prerrománico',
+    'arte preromanica': 'Prerrománico', 'arte asturiano': 'Prerrománico',
+    'architecture préromane de tradition wisigothique': 'Prerrománico',
+    'arte de repoblación': 'Prerrománico', 'iglesias de repoblación': 'Prerrománico',
+    // Paleocristiano
+    'arte paleocristiana': 'Paleocristiano', 'arte paleocristiano': 'Paleocristiano',
+    'architettura paleocristiana': 'Paleocristiano',
+    'architecture paléochrétienne': 'Paleocristiano', 'arquitectura paleocristiana': 'Paleocristiano',
+    // Islámico
+    'arquitectura islámica': 'Islámico', 'arte emiral y califal': 'Islámico',
+    'arte andalusí': 'Islámico', 'arquitectura nazarí': 'Islámico',
+    'arte taifa': 'Islámico', 'arquitectura almohade en españa': 'Islámico',
+    'imperio almohade': 'Islámico', 'arquitetura islâmica': 'Islámico',
+    'arquitectura neoárabe': 'Islámico', 'arquitectura morisca': 'Islámico',
+    'arquitetura mourisca': 'Islámico', 'architecture néo-mauresque': 'Islámico',
+    'estilo neoislâmico': 'Islámico', 'arquitectura árabe': 'Islámico',
+    // Romano
+    'arquitectura de la antigua roma': 'Romano', 'architettura romana': 'Romano',
+    'architecture romaine': 'Romano', 'arquitetura da roma antiga': 'Romano',
+    'antigua roma': 'Romano',
+    // Bizantino
+    'architettura bizantina': 'Bizantino', 'architettura neobizantina': 'Bizantino',
+    'architecture néo-byzantine': 'Bizantino', 'arquitectura neobizantina': 'Bizantino',
+    'arte bizantina': 'Bizantino', 'arquitetura neobizantina': 'Bizantino',
+    // Cisterciense
+    'arte cisterciense': 'Cisterciense', 'architettura cistercense': 'Cisterciense',
+    'art cistercien': 'Cisterciense',
+    // Herreriano
+    'arquitectura herreriana': 'Herreriano',
+    // Manuelino
+    'estilo manuelino': 'Manuelino', 'estilo neomanuelino': 'Manuelino',
+    // Plateresco
+    'plateresco': 'Plateresco', 'arquitectura neoplateresca': 'Plateresco',
+    'estilo cisneros': 'Plateresco',
+    // Brutalismo
+    'brutalismo': 'Brutalismo', 'brutalisme': 'Brutalismo',
+    'arquitetura brutalista': 'Brutalismo',
+    // Novecentismo
+    'novecentismo': 'Novecentismo', 'novecento': 'Novecentismo',
+    // Mozárabe
+    'arte mozárabe': 'Mozárabe', 'arquitectura mozárabe': 'Mozárabe', 'mozárabe': 'Mozárabe',
+    // Visigodo
+    'arquitectura visigoda': 'Visigodo', 'arquitectura visigótica': 'Visigodo',
+    'arte visigótica': 'Visigodo',
+    // Normando
+    'architettura normanna': 'Normando', 'architettura normanna in sicilia': 'Normando',
+    'architettura arabo-normanna': 'Normando', 'architecture normande': 'Normando',
+    'normanno': 'Normando',
+    // Palladianismo
+    'palladianesimo': 'Palladianismo', 'palladianismo': 'Palladianismo',
+    'palladianisme': 'Palladianismo',
+    // Clasicismo francés
+    'architecture classique': 'Clasicismo francés', 'style second empire': 'Clasicismo francés',
+    'style empire': 'Clasicismo francés', 'style louis xiii': 'Clasicismo francés',
+    'style louis xiv': 'Clasicismo francés', 'style louis xv': 'Clasicismo francés',
+    'style louis xvi': 'Clasicismo francés', 'stile impero': 'Clasicismo francés',
+    'estilo segundo imperio': 'Clasicismo francés', 'style directoire': 'Clasicismo francés',
+    // Beaux-Arts
+    'beaux-arts': 'Beaux-Arts', 'style beaux-arts': 'Beaux-Arts', 'beaux arts': 'Beaux-Arts',
+    // Industrial
+    'architettura industriale': 'Industrial', 'arquitetura industrial': 'Industrial',
+    'arquitectura industrial': 'Industrial', 'arquitectura en hierro': 'Industrial',
+    // Estilos portugueses
+    'estilo português suave': 'Estilo Portugués Suave', 'estilo chão': 'Estilo Portugués Suave',
+    'estilo pombalino': 'Estilo Portugués Suave',
+    // Monumentalismo
+    'monumentalismo': 'Monumentalismo', 'architettura fascista': 'Monumentalismo',
+    'stile littorio': 'Monumentalismo',
+    // Neovasco
+    'neovasco': 'Neovasco', 'style néobasque': 'Neovasco',
+    // Romanticismo
+    'romanticismo': 'Romanticismo', 'romantic architecture': 'Romanticismo',
+    'arte romantica': 'Romanticismo', 'romantismo': 'Romanticismo',
+    // Regionalismo
+    'arquitectura regionalista': 'Regionalismo', 'regionalismo': 'Regionalismo',
+    'régionalisme': 'Regionalismo',
+    // Longobardo
+    'architettura longobarda': 'Longobardo',
+    // Estilo Internacional
+    'estilo internacional': 'Estilo Internacional', 'international style': 'Estilo Internacional',
+};
+
+// Valores a excluir (no son estilos arquitectónicos)
+const ESTILO_EXCLUIR = new Set([
+    'carl junker', 'antonio foschini', 'ars arquitectos',
+    'bien cultural de interés local', 'tipo z', 'tipo b',
+    'iglesia matriz', 'militar', 'fortaleza', 'fortificación',
+    'tejado a cuatro aguas', 'tejado a dos aguas', 'ingles',
+]);
+
+function normalizarEstilos(rawRows) {
+    const agrupados = {};
+    for (const row of rawRows) {
+        const key = row.value.toLowerCase();
+        if (ESTILO_EXCLUIR.has(key) || /^q\d+$/.test(key)) continue;
+        const normalizado = ESTILO_NORMALIZACION[key]
+            || row.value.charAt(0).toUpperCase() + row.value.slice(1);
+        if (!agrupados[normalizado]) {
+            agrupados[normalizado] = { value: normalizado, count: 0 };
+        }
+        agrupados[normalizado].count += parseInt(row.count, 10);
+    }
+    return Object.values(agrupados).sort((a, b) => b.count - a.count);
+}
+
 function applyClasificacionFilter(clasificacion, where, params, piRef) {
     if (clasificacion === 'otros') {
         const placeholders = ALL_CLASSIFIED_TIPOS.map(() => `$${piRef.value++}`);
@@ -1080,23 +1306,7 @@ app.get('/api/filtros', async (req, res) => {
             GROUP BY provincia, comunidad_autonoma, pais ORDER BY LOWER(provincia)
         `, provParams);
 
-        // Categorías filtradas
-        const categoriasR = await db.query(`
-            SELECT b.categoria as value, COUNT(*) as count
-            FROM bienes b
-            WHERE b.categoria IS NOT NULL AND b.categoria != '' AND ${whereClause}
-            GROUP BY b.categoria ORDER BY LOWER(b.categoria)
-        `, whereParams);
-
-        // Tipos filtrados
-        const tiposR = await db.query(`
-            SELECT b.tipo as value, COUNT(*) as count
-            FROM bienes b
-            WHERE b.tipo IS NOT NULL AND b.tipo != '' AND ${whereClause}
-            GROUP BY b.tipo ORDER BY LOWER(b.tipo)
-        `, whereParams);
-
-        // Estilos filtrados
+        // Estilos filtrados (normalizados multi-idioma → español)
         const estilosR = await db.query(`
             SELECT w.estilo as value, COUNT(*) as count
             FROM wikidata w
@@ -1104,10 +1314,7 @@ app.get('/api/filtros', async (req, res) => {
             WHERE w.estilo IS NOT NULL AND w.estilo != '' AND ${whereClause}
             GROUP BY w.estilo ORDER BY LOWER(w.estilo)
         `, whereParams);
-        const estilos = estilosR.rows.map(e => ({
-            ...e,
-            value: e.value.charAt(0).toUpperCase() + e.value.slice(1),
-        }));
+        const estilos = normalizarEstilos(estilosR.rows);
 
         // Tipos de monumento filtrados (clasificación enriquecida)
         const tiposMonumentoR = await db.query(`
@@ -1145,8 +1352,6 @@ app.get('/api/filtros', async (req, res) => {
             regiones: regionesR.rows,
             provincias: provinciasR.rows,
             municipios: municipiosR.rows,
-            categorias: categoriasR.rows,
-            tipos: tiposR.rows,
             estilos,
             tipos_monumento: tiposMonumentoR.rows,
             periodos: periodosR.rows,
