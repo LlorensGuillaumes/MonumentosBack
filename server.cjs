@@ -975,6 +975,13 @@ app.get('/api/monumentos', async (req, res) => {
             where.push(`b.periodo = $${pi++}`);
             params.push(req.query.periodo);
         }
+        if (req.query.evento) {
+            where.push(`EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id AND em.qid_evento = $${pi++})`);
+            params.push(req.query.evento);
+        }
+        if (req.query.con_eventos === 'true') {
+            where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
+        }
         if (req.query.q) {
             where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
             params.push(`%${req.query.q}%`);
@@ -1166,14 +1173,15 @@ app.get('/api/monumentos/:id', async (req, res) => {
             return res.status(404).json({ error: 'Monumento no encontrado' });
         }
 
-        const imagenesResult = await db.query(
-            'SELECT url, titulo, autor, fuente FROM imagenes WHERE bien_id = ?',
-            [id]
-        );
+        const [imagenesResult, eventos] = await Promise.all([
+            db.query('SELECT url, titulo, autor, fuente FROM imagenes WHERE bien_id = ?', [id]),
+            db.obtenerEventosMonumento(id),
+        ]);
 
         res.json({
             ...bien,
             imagenes: imagenesResult.rows,
+            eventos,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1230,6 +1238,13 @@ app.get('/api/geojson', async (req, res) => {
         if (req.query.periodo) {
             where.push(`b.periodo = $${pi++}`);
             params.push(req.query.periodo);
+        }
+        if (req.query.evento) {
+            where.push(`EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id AND em.qid_evento = $${pi++})`);
+            params.push(req.query.evento);
+        }
+        if (req.query.con_eventos === 'true') {
+            where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
         }
         if (req.query.q) {
             where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
@@ -1424,6 +1439,15 @@ app.get('/api/filtros', async (req, res) => {
             municipiosR = { rows: [] };
         }
 
+        // Eventos históricos filtrados (value = qid_evento para i18n)
+        const eventosR = await db.query(`
+            SELECT em.qid_evento as value, COUNT(DISTINCT em.bien_id) as count
+            FROM eventos_monumento em
+            JOIN bienes b ON em.bien_id = b.id
+            WHERE em.qid_evento IS NOT NULL AND ${whereClause}
+            GROUP BY em.qid_evento ORDER BY count DESC
+        `, whereParams);
+
         res.json({
             paises: paisesR.rows,
             regiones: regionesR.rows,
@@ -1432,6 +1456,7 @@ app.get('/api/filtros', async (req, res) => {
             estilos,
             tipos_monumento: tiposMonumentoR.rows,
             periodos: periodosR.rows,
+            eventos: eventosR.rows,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2533,6 +2558,50 @@ app.post('/api/monumentos/:id/valoraciones', authMiddleware, async (req, res) =>
             accesibilidad || null
         );
         res.json(rating);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== EVENTOS HISTÓRICOS ==============
+
+/**
+ * GET /api/monumentos/:id/eventos
+ * Eventos históricos de un monumento (P793)
+ */
+app.get('/api/monumentos/:id/eventos', async (req, res) => {
+    try {
+        const eventos = await db.obtenerEventosMonumento(parseInt(req.params.id));
+        res.json(eventos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== RUTAS CULTURALES (público) ==============
+
+/**
+ * GET /api/rutas-culturales
+ * Listar rutas culturales activas
+ */
+app.get('/api/rutas-culturales', async (_req, res) => {
+    try {
+        const rutas = await db.obtenerRutasCulturales();
+        res.json(rutas);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/rutas-culturales/:slug
+ * Detalle de ruta cultural con paradas y fotos
+ */
+app.get('/api/rutas-culturales/:slug', async (req, res) => {
+    try {
+        const ruta = await db.obtenerRutaCultural(req.params.slug);
+        if (!ruta) return res.status(404).json({ error: 'Ruta cultural no encontrada' });
+        res.json(ruta);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -261,6 +261,64 @@ async function inicializarTablas() {
             orden INTEGER NOT NULL,
             notas TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS eventos_monumento (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER REFERENCES bienes(id),
+            evento TEXT NOT NULL,
+            qid_evento TEXT,
+            fecha TEXT,
+            descripcion TEXT,
+            personajes TEXT,
+            fuente TEXT DEFAULT 'wikidata',
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS rutas_culturales (
+            id SERIAL PRIMARY KEY,
+            slug TEXT UNIQUE NOT NULL,
+            nombre TEXT NOT NULL,
+            descripcion TEXT,
+            region TEXT,
+            pais TEXT DEFAULT 'España',
+            tema TEXT,
+            centro_lat DOUBLE PRECISION,
+            centro_lng DOUBLE PRECISION,
+            zoom INTEGER DEFAULT 10,
+            imagen_portada TEXT,
+            num_paradas INTEGER DEFAULT 0,
+            activa BOOLEAN DEFAULT true,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS rutas_culturales_paradas (
+            id SERIAL PRIMARY KEY,
+            ruta_id INTEGER NOT NULL REFERENCES rutas_culturales(id) ON DELETE CASCADE,
+            bien_id INTEGER REFERENCES bienes(id),
+            orden INTEGER NOT NULL,
+            nombre TEXT NOT NULL,
+            localidad TEXT,
+            municipio TEXT,
+            latitud DOUBLE PRECISION,
+            longitud DOUBLE PRECISION,
+            descripcion TEXT,
+            estilo TEXT,
+            periodo TEXT,
+            autor TEXT,
+            anyo_restauracion TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS rutas_culturales_fotos (
+            id SERIAL PRIMARY KEY,
+            parada_id INTEGER NOT NULL REFERENCES rutas_culturales_paradas(id) ON DELETE CASCADE,
+            url TEXT NOT NULL,
+            titulo TEXT,
+            orden INTEGER DEFAULT 0,
+            autor TEXT,
+            fuente TEXT
+        );
     `);
 
     await pool.query(`
@@ -298,6 +356,12 @@ async function inicializarTablas() {
         CREATE INDEX IF NOT EXISTS idx_rutas_usuario ON rutas_usuario(usuario_id);
         CREATE INDEX IF NOT EXISTS idx_rutas_paradas_ruta ON rutas_paradas(ruta_id);
         CREATE INDEX IF NOT EXISTS idx_rutas_paradas_bien ON rutas_paradas(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_eventos_bien ON eventos_monumento(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_eventos_qid ON eventos_monumento(qid_evento);
+        CREATE INDEX IF NOT EXISTS idx_rc_slug ON rutas_culturales(slug);
+        CREATE INDEX IF NOT EXISTS idx_rc_paradas_ruta ON rutas_culturales_paradas(ruta_id);
+        CREATE INDEX IF NOT EXISTS idx_rc_paradas_bien ON rutas_culturales_paradas(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_rc_fotos_parada ON rutas_culturales_fotos(parada_id);
     `);
 
     // Add contenido column to imagenes if not exists (for locally uploaded images)
@@ -1370,6 +1434,77 @@ async function crearSocialHistory(bienId, platform) {
     return r.rows[0];
 }
 
+// =========== Eventos Históricos ===========
+
+async function obtenerEventosMonumento(bienId) {
+    await ensureInit();
+    const r = await getPool().query(
+        `SELECT evento, qid_evento, fecha, descripcion, personajes, fuente
+         FROM eventos_monumento
+         WHERE bien_id = $1
+         ORDER BY fecha ASC NULLS LAST`,
+        [bienId]
+    );
+    return r.rows;
+}
+
+// =========== Rutas Culturales ===========
+
+async function obtenerRutasCulturales() {
+    await ensureInit();
+    const r = await getPool().query(`
+        SELECT id, slug, nombre, descripcion, region, pais, tema,
+               centro_lat, centro_lng, zoom, imagen_portada, num_paradas,
+               created_at
+        FROM rutas_culturales
+        WHERE activa = true
+        ORDER BY created_at DESC
+    `);
+    return r.rows;
+}
+
+async function obtenerRutaCultural(slug) {
+    await ensureInit();
+    const ruta = await getPool().query(
+        'SELECT * FROM rutas_culturales WHERE slug = $1 AND activa = true',
+        [slug]
+    );
+    if (!ruta.rows[0]) return null;
+
+    const rutaData = ruta.rows[0];
+    const paradas = await getPool().query(`
+        SELECT p.*,
+               b.denominacion AS bien_denominacion,
+               b.tipo_monumento AS bien_tipo_monumento,
+               COALESCE(w.imagen_url, (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1)) AS bien_imagen_url
+        FROM rutas_culturales_paradas p
+        LEFT JOIN bienes b ON p.bien_id = b.id
+        LEFT JOIN wikidata w ON p.bien_id = w.bien_id
+        WHERE p.ruta_id = $1
+        ORDER BY p.orden
+    `, [rutaData.id]);
+
+    const paradaIds = paradas.rows.map(p => p.id);
+    let fotos = [];
+    if (paradaIds.length > 0) {
+        const placeholders = paradaIds.map((_, i) => `$${i + 1}`).join(',');
+        const fotosResult = await getPool().query(
+            `SELECT * FROM rutas_culturales_fotos
+             WHERE parada_id IN (${placeholders})
+             ORDER BY parada_id, orden`,
+            paradaIds
+        );
+        fotos = fotosResult.rows;
+    }
+
+    const paradasConFotos = paradas.rows.map(p => ({
+        ...p,
+        fotos: fotos.filter(f => f.parada_id === p.id),
+    }));
+
+    return { ...rutaData, paradas: paradasConFotos };
+}
+
 // =========== Cerrar ===========
 
 async function cerrar() {
@@ -1457,5 +1592,8 @@ module.exports = {
     eliminarRuta,
     obtenerSocialHistoryIds,
     crearSocialHistory,
+    obtenerEventosMonumento,
+    obtenerRutasCulturales,
+    obtenerRutaCultural,
     cerrar,
 };
