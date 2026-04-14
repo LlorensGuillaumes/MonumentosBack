@@ -1497,10 +1497,57 @@ async function obtenerRutaCultural(slug) {
         fotos = fotosResult.rows;
     }
 
-    const paradasConFotos = paradas.rows.map(p => ({
-        ...p,
-        fotos: fotos.filter(f => f.parada_id === p.id),
-    }));
+    // Fallback: para paradas sin fotos propias pero con bien_id, tomar imágenes del bien
+    const paradasSinFotos = paradas.rows.filter(p =>
+        p.bien_id && !fotos.some(f => f.parada_id === p.id)
+    );
+    const bienImagenes = new Map(); // bien_id -> [fotos]
+    if (paradasSinFotos.length > 0) {
+        const bienIds = [...new Set(paradasSinFotos.map(p => p.bien_id))];
+        const ph = bienIds.map((_, i) => `$${i + 1}`).join(',');
+        // Imágenes desde tabla imagenes
+        const imgs = await getPool().query(
+            `SELECT bien_id, url, titulo, autor, fuente
+             FROM imagenes WHERE bien_id IN (${ph})
+             ORDER BY bien_id, id`,
+            bienIds
+        );
+        for (const r of imgs.rows) {
+            if (!bienImagenes.has(r.bien_id)) bienImagenes.set(r.bien_id, []);
+            bienImagenes.get(r.bien_id).push({
+                url: r.url,
+                titulo: r.titulo,
+                autor: r.autor,
+                fuente: r.fuente,
+            });
+        }
+        // Completar con wikidata.imagen_url para los bienes que aún no tienen
+        const bienesSinImg = bienIds.filter(id => !bienImagenes.has(id));
+        if (bienesSinImg.length > 0) {
+            const ph2 = bienesSinImg.map((_, i) => `$${i + 1}`).join(',');
+            const wdImgs = await getPool().query(
+                `SELECT bien_id, imagen_url FROM wikidata
+                 WHERE bien_id IN (${ph2}) AND imagen_url IS NOT NULL`,
+                bienesSinImg
+            );
+            for (const r of wdImgs.rows) {
+                bienImagenes.set(r.bien_id, [{
+                    url: r.imagen_url,
+                    titulo: null,
+                    autor: null,
+                    fuente: 'wikidata',
+                }]);
+            }
+        }
+    }
+
+    const paradasConFotos = paradas.rows.map(p => {
+        const propias = fotos.filter(f => f.parada_id === p.id);
+        if (propias.length > 0) return { ...p, fotos: propias };
+        // fallback a imágenes del bien
+        const fromBien = bienImagenes.get(p.bien_id) || [];
+        return { ...p, fotos: fromBien };
+    });
 
     return { ...rutaData, paradas: paradasConFotos };
 }
