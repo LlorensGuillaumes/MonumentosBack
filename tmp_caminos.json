@@ -1,0 +1,7981 @@
+[
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7924357"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Switzerland to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "645"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Suiza"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Suiza"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/4-Wegweiser.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.schweizmobil.ch/de/wanderland/route-04.html"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39081159"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "UNESCO World Heritage Site in Spain, network of routes and built heritage part of the Way of Saint James, first listed 1993, revised 2015"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "930"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Caminos de Santiago de Compostela: Camino francés y Caminos del Norte de España"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Camino%20Primitivo%20%281433111595%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39081159"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "site du patrimoine mondial en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "930"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Caminos de Santiago de Compostela: Camino francés y Caminos del Norte de España"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Camino%20Primitivo%20%281433111595%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107507711"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "bridge in Saint-Jean-Pied-de-Port, France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "17"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q107507711"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint-Jean-Pied-de-Port%2C%20vieux%20pont%20et%20%C3%A9glise.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2350964"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "edifice religieux"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "51.5"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Iglesia%20Catedral%20de%20Santiago.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://catedraldebilbao.blogspot.com.es/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Santiago Apóstol"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2350964"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "templo católico en Bilbao, España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "51.5"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Iglesia%20Catedral%20de%20Santiago.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://catedraldebilbao.blogspot.com.es/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Santiago Apóstol"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2350964"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cultural property in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "51.5"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Iglesia%20Catedral%20de%20Santiago.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://catedraldebilbao.blogspot.com.es/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Santiago Apóstol"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2350964"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "catedral de Espanha"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "51.5"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Iglesia%20Catedral%20de%20Santiago.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://catedraldebilbao.blogspot.com.es/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Santiago Apóstol"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q380251"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "percorso francese del Cammino di Santiago di Compostela"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "915"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Tours"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q380251"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Compostelle passant par Paris et Tours"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "915"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Tours"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q996686"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "one of the four routes of Camino de Santiago through France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Le Puy"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Caminos%20Santiago%20actuales%20FR%20-%2003%20Camino%20de%20Le%20Puy.svg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q996686"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "route du pèlerinage de Saint-Jacques-de-Compostelle"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Le Puy"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Caminos%20Santiago%20actuales%20FR%20-%2003%20Camino%20de%20Le%20Puy.svg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2010919"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "length": {
+      "datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+      "type": "literal",
+      "value": "159"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Oberschwäbischer Jakobsweg"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2223189"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cultural property in Monterrei, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de Santa María de Mijós"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20prerrom%C3%A1nica%20de%20Santa%20Mar%C3%ADa%20de%20Mix%C3%B3s%20-%20Monterrei%20-%20Ourense.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2223189"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "bien de interés cultural"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de Santa María de Mijós"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20prerrom%C3%A1nica%20de%20Santa%20Mar%C3%ADa%20de%20Mix%C3%B3s%20-%20Monterrei%20-%20Ourense.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2223189"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "édifice religieux espagnol"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de Santa María de Mijós"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20prerrom%C3%A1nica%20de%20Santa%20Mar%C3%ADa%20de%20Mix%C3%B3s%20-%20Monterrei%20-%20Ourense.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2513170"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "edificio di Santiago di Compostela"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Colegio de San Jerónimo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santiago%20fonseca%20GDFL050914%20038.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2513170"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "colegio mayor en Santiago de Compostela"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Colegio de San Jerónimo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santiago%20fonseca%20GDFL050914%20038.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2513170"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "college in Santiago de Compostela, Province of A Coruña, Galicia, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Colegio de San Jerónimo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santiago%20fonseca%20GDFL050914%20038.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2962473"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "UNESCO World Heritage Site in France. of the Way of St. James in France part of the World Heritage Site in France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Caminos de Santiago de Compostela en Francia (Patrimonio de la Humanidad)"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Moustey%20borne%20st%20jacques.JPG"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2962473"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "site du patrimoine mondial en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Caminos de Santiago de Compostela en Francia (Patrimonio de la Humanidad)"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Moustey%20borne%20st%20jacques.JPG"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3572282"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "sito archeologico a Somport"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Hospital de Santa Cristina de Somport"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Espital%20de%20Santa%20Cristina.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3572282"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "restos antiguo monasterio-hospital del Camino de Santiago"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Hospital de Santa Cristina de Somport"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Espital%20de%20Santa%20Cristina.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3572282"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cultural property in Aísa, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Hospital de Santa Cristina de Somport"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Espital%20de%20Santa%20Cristina.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q54943254"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "site de la liste indicative du patrimoine mondial au Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Routes of Santiago de Compostela: Routes in Portugal"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Cominho%20de%20Santiago-Antas.JPG"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q54943254"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "sections of the Way of St. James in Portugal part of the Tentative World Heritage site in Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Routes of Santiago de Compostela: Routes in Portugal"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Cominho%20de%20Santiago-Antas.JPG"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q60964413"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta del Camino de Santiago"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Invierno"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mural%20de%20peregrina%20en%20Quiroga.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q60964413"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire du pèlerinage de Saint-Jacques-de-Compostelle"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Invierno"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mural%20de%20peregrina%20en%20Quiroga.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866320"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Czechia to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q213"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en la República Checa"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "República Checa"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Poutnick%C3%A1%20socha%20sv.%20Jakuba%20u%20ruprechtick%C3%A9ho%20kostela%20sv.%20Jakuba%20V%C4%9Bt%C5%A1%C3%ADho.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://ultreia.cz/trasy-cr/"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866320"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Czechia to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q213"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en la República Checa"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "República Checa"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Svatojakubsk%C3%BD%20poutn%C3%AD%20k%C3%A1men%20v%20Jarom%C4%9B%C5%99i%20u%20kostela%20sv.%20Jakuba%20V%C4%9Bt%C5%A1%C3%ADho.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://ultreia.cz/trasy-cr/"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866328"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Poland to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q36"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Polonia"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Polonia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Sudetsk%C3%A1%20svatojakubsk%C3%A1%20cesta%20v%20polsk%C3%A9m%20K%C5%99e%C5%A1ov%C4%9B%20%28Sudecka%20droga%20sw.%20Jakuba%2C%20zna%C4%8Den%C3%AD%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866348"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Portugal to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Portugal"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107509137"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "city gate in Saint-Jean-Pied-de-Port, France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "porte Saint-Jacques"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Rue%20de%20la%20citadelle%20et%20porte%20Saint-Jacques.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107509137"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "porte de ville à Saint-Jean-Pied-de-Port, en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "porte Saint-Jacques"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Rue%20de%20la%20citadelle%20et%20porte%20Saint-Jacques.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107509435"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q107509435"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint-Jean-Pied-de-Port%2016.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "église à Saint-Jean-Pied-de-Port (Pyrénées-Atlantiques)"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Principio%20del%20Camino%20Frances.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia situada en Pirineos Atlánticos, en Francia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Principio%20del%20Camino%20Frances.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "church located in Pyrénées-Atlantiques, in France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Principio%20del%20Camino%20Frances.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "église à Saint-Jean-Pied-de-Port (Pyrénées-Atlantiques)"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint%20Jean%20Pied%20de%20Port%20Eglise%20%281%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia situada en Pirineos Atlánticos, en Francia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint%20Jean%20Pied%20de%20Port%20Eglise%20%281%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107901922"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "church located in Pyrénées-Atlantiques, in France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Notre-Dame"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint%20Jean%20Pied%20de%20Port%20Eglise%20%281%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116064412"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "rua em Aquisgrano, Alemanha"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alexanderstraße"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Alexanderstra%C3%9Fe%2C%20Aachen.JPG"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://geoportal.aachen.de/extern/?lang=de&globalsearch=Alexanderstra%C3%9Fe&basemap=web61482881ca3e4ky73o&blop=1&x=294910.59469754&y=5629212.0692712&zl=19&hl=0&layers="
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116064412"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "strada ad Aquisgrana, Germania"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alexanderstraße"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Alexanderstra%C3%9Fe%2C%20Aachen.JPG"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://geoportal.aachen.de/extern/?lang=de&globalsearch=Alexanderstra%C3%9Fe&basemap=web61482881ca3e4ky73o&blop=1&x=294910.59469754&y=5629212.0692712&zl=19&hl=0&layers="
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116064412"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "rue à Aix-la-Chapelle, Allemagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alexanderstraße"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Alexanderstra%C3%9Fe%2C%20Aachen.JPG"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://geoportal.aachen.de/extern/?lang=de&globalsearch=Alexanderstra%C3%9Fe&basemap=web61482881ca3e4ky73o&blop=1&x=294910.59469754&y=5629212.0692712&zl=19&hl=0&layers="
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116064412"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "calle en Aquisgrán, Alemania"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alexanderstraße"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Alexanderstra%C3%9Fe%2C%20Aachen.JPG"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://geoportal.aachen.de/extern/?lang=de&globalsearch=Alexanderstra%C3%9Fe&basemap=web61482881ca3e4ky73o&blop=1&x=294910.59469754&y=5629212.0692712&zl=19&hl=0&layers="
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116064412"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "street in Aachen, Germany"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alexanderstraße"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Alexanderstra%C3%9Fe%2C%20Aachen.JPG"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://geoportal.aachen.de/extern/?lang=de&globalsearch=Alexanderstra%C3%9Fe&basemap=web61482881ca3e4ky73o&blop=1&x=294910.59469754&y=5629212.0692712&zl=19&hl=0&layers="
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q124037386"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "public artwork in City of Brussels, Belgium"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "Pèlerin"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Wiki%20Loves%20Art%20-%20Bruxelles%20-%20Porte%20de%20Hal%20-%20objet%20ext%C3%A9rieur%20%282%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q124037386"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "œuvre d'art public à Ville de Bruxelles, Belgique"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "Pèlerin"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Wiki%20Loves%20Art%20-%20Bruxelles%20-%20Porte%20de%20Hal%20-%20objet%20ext%C3%A9rieur%20%282%29.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q127257415"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "place publique à Aix-la-Chapelle, Allemagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Markt"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Aachen%20BW%202016-07-09%2014-15-36.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q127257415"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "public square in Aachen, Germany"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Markt"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Aachen%20BW%202016-07-09%2014-15-36.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q127257415"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "piazza di Aquisgrana, in Germania"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Markt"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Aachen%20BW%202016-07-09%2014-15-36.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q127257415"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "praça em Aquisgrano, Alemanha"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Markt"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Aachen%20BW%202016-07-09%2014-15-36.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q127257415"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "plaza en Aquisgrán, Alemania"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Markt"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Aachen%20BW%202016-07-09%2014-15-36.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136202565"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136202565"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20de%20Santa%20Mar%C3%ADa%20de%20Tamagos%2C%20Ver%C3%ADn.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136202588"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136202588"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20Tamaguelos.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136215056"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136215056"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20de%20Rebordondo%2C%20Cualedro%202.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136228810"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136228810"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20Matam%C3%A1%2C%20Matam%C3%A1%2C%20Laza.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136228812"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136228812"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Igrexa%20de%20Santa%20Mar%C3%ADa%20de%20Retorta%2C%20Laza.jpg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3303976"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "musée du Pays Basque"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Museo%20Arqueol%C3%B3gico%2C%20Etnogr%C3%A1fico%20e%20Hist%C3%B3rico%20Vasco%20%28Claustro%20de%20los%20Santos%20Juanes%29%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.euskal-museoa.org/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Museo Vasco. Museo Etnográfico e Histórico Vasco"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3303976"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Basque Country Museum"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Museo%20Arqueol%C3%B3gico%2C%20Etnogr%C3%A1fico%20e%20Hist%C3%B3rico%20Vasco%20%28Claustro%20de%20los%20Santos%20Juanes%29%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.euskal-museoa.org/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Museo Vasco. Museo Etnográfico e Histórico Vasco"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3303976"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "museo spagnolo"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Museo%20Arqueol%C3%B3gico%2C%20Etnogr%C3%A1fico%20e%20Hist%C3%B3rico%20Vasco%20%28Claustro%20de%20los%20Santos%20Juanes%29%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.euskal-museoa.org/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Museo Vasco. Museo Etnográfico e Histórico Vasco"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3303976"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "museo en el País Vasco"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Museo%20Arqueol%C3%B3gico%2C%20Etnogr%C3%A1fico%20e%20Hist%C3%B3rico%20Vasco%20%28Claustro%20de%20los%20Santos%20Juanes%29%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.euskal-museoa.org/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Museo Vasco. Museo Etnográfico e Histórico Vasco"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3750900"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "teatro di Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casco%20viejo%20de%20Bilbao%20%281%29.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.teatroarriaga.eus/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Teatro Arriaga"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3750900"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "theatre in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casco%20viejo%20de%20Bilbao%20%281%29.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.teatroarriaga.eus/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Teatro Arriaga"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3750901"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cultural property in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20anton%20eliza.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Iglesia de San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3750901"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "église espagnole"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20anton%20eliza.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Iglesia de San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3750901"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "edificio en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20anton%20eliza.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Iglesia de San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3751925"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "puente en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20Muelle%20San%20Anton.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Puente San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3751925"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "bridge in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20Muelle%20San%20Anton.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Puente San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3751925"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "pont situé en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20Muelle%20San%20Anton.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Puente San Antón"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3757177"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Santos%20Juanes%2010.JPG"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de los Santos Juanes"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3757177"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "church building in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Santos%20Juanes%2010.JPG"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de los Santos Juanes"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3757177"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "édifice religieux espagnol"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Santos%20Juanes%2010.JPG"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de los Santos Juanes"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7203631"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "piazza di Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%2C%20Plaza%20Nueva%2C%2052-2-4v.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Plaza Nueva"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7203631"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "town square in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%2C%20Plaza%20Nueva%2C%2052-2-4v.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Plaza Nueva"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7203631"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "plaza de Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%2C%20Plaza%20Nueva%2C%2052-2-4v.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Plaza Nueva"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q8228909"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "mercado de abastos en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Ribera.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://bilbaozerbitzuak.bilbao.eus/inicio/mercado-de-la-ribera/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Mercado de la Ribera"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q8228909"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "market in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Ribera.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://bilbaozerbitzuak.bilbao.eus/inicio/mercado-de-la-ribera/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Mercado de la Ribera"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9007238"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20San%20Nicolas%2021.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de San Nicolás"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9007238"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "church building in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20San%20Nicolas%2021.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "iglesia de San Nicolás"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q17622833"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "biblioteca na Espanha"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Calle%20Bidebarrieta%2C%20Biblioteca%20Municipal%20de%20Bidebarrieta%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.bilbao.net/Bibliotecas"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Biblioteca Municipal de Bidebarrieta"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q17622833"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "biblioteca in Spagna"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Calle%20Bidebarrieta%2C%20Biblioteca%20Municipal%20de%20Bidebarrieta%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.bilbao.net/Bibliotecas"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Biblioteca Municipal de Bidebarrieta"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q17622833"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "bibliothèque en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Calle%20Bidebarrieta%2C%20Biblioteca%20Municipal%20de%20Bidebarrieta%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.bilbao.net/Bibliotecas"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Biblioteca Municipal de Bidebarrieta"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q17622833"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "library in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Calle%20Bidebarrieta%2C%20Biblioteca%20Municipal%20de%20Bidebarrieta%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.bilbao.net/Bibliotecas"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Biblioteca Municipal de Bidebarrieta"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q17622833"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "biblioteca en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Calle%20Bidebarrieta%2C%20Biblioteca%20Municipal%20de%20Bidebarrieta%201.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.bilbao.net/Bibliotecas"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Biblioteca Municipal de Bidebarrieta"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q19733995"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20El%20Arenal%201.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Kiosko del Arenal"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23682863"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "bâtiment de la Biscaye, Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Edificio%20La%20Uni%C3%B3n%20y%20el%20F%C3%A9nix%202.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa \"La Unión Y El Fenix\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23682863"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "building in Biscay, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Edificio%20La%20Uni%C3%B3n%20y%20el%20F%C3%A9nix%202.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa \"La Unión Y El Fenix\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23682863"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "edificio en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Edificio%20La%20Uni%C3%B3n%20y%20el%20F%C3%A9nix%202.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa \"La Unión Y El Fenix\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23891335"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "edificio de Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Primera%20sede%20del%20Banco%20de%20Bilbao%204.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Banco de Bilbao Vizcaya"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23891335"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "bâtiment de la Biscaye, Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Primera%20sede%20del%20Banco%20de%20Bilbao%204.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Banco de Bilbao Vizcaya"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23891335"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "building in Biscay, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Primera%20sede%20del%20Banco%20de%20Bilbao%204.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Banco de Bilbao Vizcaya"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23893991"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Colegio%20Zab%C3%A1lburu%20%28antiguo%20Convento%20de%20la%20Esperanza%29%201.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Convento De Las Agustinas"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23894017"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio situado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Palacio%20Arana%201.JPG"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio Arana"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q23899597"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Palacio%20de%20Yohn%20%28Edificio%20La%20Bolsa%29%201.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio De La Bolsa"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q25476594"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Casco%20Viejo%2020.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio B. Gomez De La Torre"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q25476595"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "palace in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Gortazar%20jauregia.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio Gortazar"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q25476611"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Allende%20Salazar%20jauregia.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Palacio Allende - Salazar"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q25477142"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20casco%20viejo%2004.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Fuente Del Perro"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q39080972"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ignatiusweg%20%283%29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino Ignaciano"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558624"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20-%20Plaza%20de%20Santiago%202.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Plazuela De Santiago 5"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558626"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Banco%20de%20Espa%C3%B1a%202%20etxea.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Banco De España 2"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558633"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Dendarikale%206%20Zazpikaleak%20Bilbo.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Tenderia 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558636"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Dendarikale%2032.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Tenderia 32"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558638"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Dendarikale%2038%20zk.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Tenderia 38"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558639"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Dendarikale%2042%20zk.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Tenderia 42"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558643"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Esperanza%208.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Esperanza 8"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558647"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Construcci%C3%B3n%20en%20el%20Front%C3%B3n%20De%20La%20Esperanza.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Frontón De La Esperanza"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558647"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Desaparecido%20front%C3%B3n%20de%20La%20Esperanza.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Frontón De La Esperanza"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558648"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Zazpikaleak%2C%20Barrenkale%2C29.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale 29"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558650"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20Bizkaya%20Kutxa%20-%20panoramio.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Sede de Bilbao Bizkaia Kutxa"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558650"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "building in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilbao%20Bizkaya%20Kutxa%20-%20panoramio.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Sede de Bilbao Bizkaia Kutxa"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558652"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Sendeja%206.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Sendeja 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558653"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Sendeja%207.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Sendeja 7"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558655"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Viuda%20De%20Epalza%202.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Viuda De Epalza 2"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558657"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Viuda%20De%20Epalza%208.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Viuda De Epalza 8"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558658"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Viuda%20De%20Epalza%209.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Viuda De Epalza 9"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558660"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Viuda%20De%20Epalza%2012.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Viuda De Epalza 12"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558664"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%204.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 4"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558668"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mallona%20galtzada%2013-15.%20ataria.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Calzadas De Mallona 13 - 15"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558669"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%206.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558670"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%207.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 7"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558671"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%208%20-%2010.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 8 - 10"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558672"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%209.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 9"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558673"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%2014.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 14"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558674"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%2016.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 16"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558675"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Casa%20Barrenkale%20Barrena%2018.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 18"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558676"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bidebarrieta%201.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Bidebarrieta 1"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558677"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bidebarrieta%202%20etxea.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Bidebarrieta 2"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558678"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bidebarrieta%206%20etxea.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Bidebarrieta 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558680"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Areatza%201.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Arenal 1"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558683"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Placeta%20de%20Santiago%20P1270331.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Carniceria Vieja 29"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558685"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Bilboko%20Posta%20kalea%2010.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Correo 10"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "variante ao Caminho de Santiago que tem inicio no Pinhão, Vale do Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "variante ao Caminho de Santiago que tem inicio no Pinhão, Vale do Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "variante ao Caminho de Santiago que tem inicio no Pinhão, Vale do Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "pt",
+      "type": "literal",
+      "value": "variante ao Caminho de Santiago que tem inicio no Pinhão, Vale do Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "variante du Camino de Santiago qui commence à Pinhão, vallée du Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "variante du Camino de Santiago qui commence à Pinhão, vallée du Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "variante du Camino de Santiago qui commence à Pinhão, vallée du Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "variante du Camino de Santiago qui commence à Pinhão, vallée du Douro, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "variante del Camino de Santiago que comienza en Pinhão, Valle del Duero, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "variante del Camino de Santiago que comienza en Pinhão, Valle del Duero, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "variante del Camino de Santiago que comienza en Pinhão, Valle del Duero, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "variante del Camino de Santiago que comienza en Pinhão, Valle del Duero, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in Pinhão, Douro Valley, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in Pinhão, Douro Valley, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in Pinhão, Douro Valley, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q67894705"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in Pinhão, Douro Valley, Portugal"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Way%20of%20Saint%20James%20in%20Pinh%C3%A3o%2C%20Douro%20Valley%2C%20Portugal.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago - Variante \"corazón del Duero\""
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portugal"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q134607539"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Main%20portal%20of%20Church%20of%20Santa%20Mar%C3%ADa%20del%20Coro%2C%20Donostia-San%20Sebasti%C3%A1n%2001.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Portal of Santa María del Coro, Donostia-San Sebastián"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q135041733"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Portada gótica de la Catedral de Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Catedral%20de%20Bilbao.%20Puerta%20del%20%C3%81ngel.jpg"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Puerta del Ángel"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "monasterio en Sobrado, España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mosteiro%20de%20Sobrado%20%282%29.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Cistercian monastery in Galiza, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mosteiro%20de%20Sobrado%20%282%29.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "établissement humain en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Mosteiro%20de%20Sobrado%20%282%29.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "monasterio en Sobrado, España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Sobrado%20Monasterio.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Cistercian monastery in Galiza, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Sobrado%20Monasterio.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q680292"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "établissement humain en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Sobrado%20Monasterio.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://www.monasteriodesobrado.org"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Monasterio de Santa María de Sobrado"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q824076"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "municipality in the Galician province of Lugo, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ribadeo%20Parque%20Central.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://ribadeo.gal/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ribadeo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q824076"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "municipio de la provincia de Lugo, España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ribadeo%20Parque%20Central.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://ribadeo.gal/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ribadeo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q824076"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "commune espagnole"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ribadeo%20Parque%20Central.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://ribadeo.gal/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ribadeo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q824076"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "comune spagnolo"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Ribadeo%20Parque%20Central.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "http://ribadeo.gal/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ribadeo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q922172"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "lieu de culte catholique en Cantabrie"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santander%20Cathedral%202021%20-%20exterior%20panoramic.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.diocesisdesantander.com/catedral-2/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Nuestra Señora de la Asunción de Santander"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q922172"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "templo católico en Santander, España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santander%20Cathedral%202021%20-%20exterior%20panoramic.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.diocesisdesantander.com/catedral-2/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Nuestra Señora de la Asunción de Santander"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q922172"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cathedral in Santander, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "img": {
+      "type": "uri",
+      "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Santander%20Cathedral%202021%20-%20exterior%20panoramic.jpg"
+    },
+    "web": {
+      "type": "uri",
+      "value": "https://www.diocesisdesantander.com/catedral-2/"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Catedral de Nuestra Señora de la Asunción de Santander"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q463192"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "documento religioso che certifica il compimento del pellegrinaggio di Santiago de Compostela"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "compostela"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q463192"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "certificado de haber hecho el Camino de Santiago"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "compostela"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q463192"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrim (distance) certificate Santiago de Compostella"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "compostela"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q1250609"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Austria to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q40"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Austria"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Austria"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562175"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire secondaire du pèlerinage de Saint-Jacques-de-Compostelle"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "voie de Soulac"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q20181705"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q28"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q20181705"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Hungría"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q63455412"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q63455412"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866310"
+    },
+    "desc": {
+      "xml:lang": "it",
+      "type": "literal",
+      "value": "cammini di pellegrinaggio verso Santiago di Compostela in Spagna"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en España"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866310"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "rutas de peregrinaje a Santiago de Compostela en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en España"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866310"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Spain to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en España"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866323"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Italy to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q38"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Italia"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Italia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866326"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in the Netherlands to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q55"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en los Países Bajos"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Países Bajos"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866334"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in France to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "rutas jacobea en Francia"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866342"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Germany to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Alemania"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866361"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in the United Kingdom to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q145"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en el Reino Unido"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Reino Unido"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866405"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Luxemburg to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q32"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Luxemburgo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Luxemburgo"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866573"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Belgium to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Bélgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866723"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Slovenia to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q215"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Eslovenia"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Eslovenia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q64866724"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage routes in Hungary to Santiago de Compostela, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q28"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta jacobea en Hungría"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Hungría"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65216398"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago en el País Vasco"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65965709"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Sección del Camino de Santiago"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino del Valle de Mena"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q135588441"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "document for pilgrims on the Way of St. James to collect stamps and prove their status"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Credential"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136202467"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136202467"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136202622"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136202622"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136204080"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136204080"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136214771"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136214771"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136228836"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136228836"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136386687"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q36"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136386687"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Polonia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136445619"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q183"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q136445619"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Alemania"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q137386305"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de pélerinage en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Lorient"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q137386367"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de pélerinage en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "voie de l'Abbaye de Beauport"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q138648293"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q138648293"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q138648304"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q138648304"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q31"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Bélgica"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "itinéraire de randonnée situé en Belgique et en France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3556492"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "long-distance trail in Belgium and France"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Via Gallia Belgica"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Saint-Jacques au Pays Basque"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Saint-Jacques au Pays Basque"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Saint-Jacques au Pays Basque"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de Saint-Jacques au Pays Basque"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago en Euskal Herria"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago en Euskal Herria"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago en Euskal Herria"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de Santiago en Euskal Herria"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in the Basque Country"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in the Basque Country"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in the Basque Country"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3562186"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Way of Saint James in the Basque Country"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q142"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Vía de la Nive"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Francia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9209199"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Lowersilesian  Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9209199"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Lowersilesian  Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9209199"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Lowersilesian  Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9209199"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Lowersilesian  Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9347882"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q9347882"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9347882"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q9347882"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9347882"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q9347882"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9347882"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q9347882"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9373070"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Greaterpolish Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9373070"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Greaterpolish Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9373070"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Greaterpolish Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9373070"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Greaterpolish Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11823712"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Pomeranian Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11823712"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Pomeranian Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11823712"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Pomeranian Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11823712"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Pomeranian Way of Saint James"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558625"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Plazuela De Santiago 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558627"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 6"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558628"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 8"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558629"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 12"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558630"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 15"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558631"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 43"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558632"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Somera 45"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558634"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Banco De España 3"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558635"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Tenderia 26"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558640"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa De Condes De Casa Puente"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558641"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Landetxo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558642"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Ekainkobak 1"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558644"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale 9"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558646"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Comulgatorio De La Casa Cural De San Nicolas"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558646"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "building in Bilbao, Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Comulgatorio De La Casa Cural De San Nicolas"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558651"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Sendeja 3"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558654"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Portal De Zamudio S/N"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558656"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale 36"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558659"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Viuda De Epalza 10"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558661"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale 42"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558663"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Barrenkale Barrena 1"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558679"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Mazarredo"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558681"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Carniceria Vieja 8"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558682"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Carniceria Vieja 20"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q65558684"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "patrimonio construído vasco destacado en Bilbao"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Casa Cintureria 2"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "chemin de pèlerinage en Espagne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "ruta de peregrinación en España"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130355884"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage route in Spain"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Camino de las Asturias"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "pèlerinage en Catalogne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "pèlerinage en Catalogne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "pèlerinage en Catalogne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "fr",
+      "type": "literal",
+      "value": "pèlerinage en Catalogne"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "peregrinaje en Cataluña"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "peregrinaje en Cataluña"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "peregrinaje en Cataluña"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "peregrinaje en Cataluña"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage in Catalonia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage in Catalonia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage in Catalonia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q130364384"
+    },
+    "desc": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pilgrimage in Catalonia"
+    },
+    "country": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q29"
+    },
+    "itemLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "Ruta Jacobea de Gerona"
+    },
+    "countryLabel": {
+      "xml:lang": "es",
+      "type": "literal",
+      "value": "España"
+    }
+  }
+]

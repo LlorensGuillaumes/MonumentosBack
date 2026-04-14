@@ -1615,6 +1615,27 @@ app.get('/api/municipios', async (req, res) => {
 });
 
 /**
+ * POST /api/contactos
+ * Crear un nuevo contacto
+ */
+app.post('/api/contactos', async (req, res) => {
+    try {
+        const { municipio, provincia, comunidad_autonoma, email_general, email_patrimonio, persona_contacto, cargo, telefono, web, fuente, tipo, pais } = req.body;
+        if (!municipio) return res.status(400).json({ error: 'El nombre/municipio es obligatorio' });
+
+        const result = await db.query(`
+            INSERT INTO contactos_municipios (municipio, provincia, comunidad_autonoma, email_general, email_patrimonio, persona_contacto, cargo, telefono, web, fuente, tipo, pais, fecha_actualizacion)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+            RETURNING *
+        `, [municipio, provincia || null, comunidad_autonoma || null, email_general || null, email_patrimonio || null, persona_contacto || null, cargo || null, telefono || null, web || null, fuente || null, tipo || 'otro', pais || 'España']);
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * GET /api/contactos
  * Lista de contactos de municipios con filtros y paginación
  */
@@ -1651,6 +1672,10 @@ app.get('/api/contactos', async (req, res) => {
         }
         if (req.query.solo_sin_telefono === 'true') {
             where.push('telefono IS NULL');
+        }
+        if (req.query.tipo) {
+            where.push(`tipo = $${pi++}`);
+            params.push(req.query.tipo);
         }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -1968,12 +1993,27 @@ app.post('/api/email/send', upload.array('archivos', 10), async (req, res) => {
                 }
 
                 try {
+                    const firma = `
+<br><br>
+<table cellpadding="0" cellspacing="0" style="border-top: 2px solid #3b82f6; padding-top: 12px; margin-top: 20px; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="vertical-align: middle; padding-right: 14px; font-size: 36px;">🏛️</td>
+    <td style="vertical-align: middle;">
+      <strong style="color: #1a365d; font-size: 15px;">Patrimonio Europeo</strong><br>
+      <span style="color: #64748b; font-size: 12px;">Descubre el patrimonio arquitectónico de Europa</span><br>
+      <a href="https://patrimonio-europeo.netlify.app" style="color: #3b82f6; font-size: 13px; text-decoration: none;">patrimonio-europeo.netlify.app</a>
+    </td>
+  </tr>
+</table>`;
+                    const htmlBody = cuerpoFinal.replace(/\n/g, '<br>') + firma;
+                    const textBody = cuerpoFinal + '\n\n---\n🏛️ Patrimonio Europeo\nDescubre el patrimonio arquitectónico de Europa\nhttps://patrimonio-europeo.netlify.app';
+
                     await transporter.sendMail({
                         from: gmail_user,
                         to: email,
                         subject: asuntoFinal,
-                        text: cuerpoFinal,
-                        html: cuerpoFinal.replace(/\n/g, '<br>'),
+                        text: textBody,
+                        html: htmlBody,
                         attachments,
                     });
                     emailJob.sent++;
@@ -2954,6 +2994,128 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         }
 
         res.json({ extract, source: 'wikipedia', lang });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============== SOCIAL ACCOUNTS (menciones para publicaciones) ==============
+
+/**
+ * GET /api/admin/social-accounts/suggest
+ * Sugiere cuentas de Instagram para mencionar en un post, basándose en:
+ *   - pais del monumento
+ *   - region del monumento (comunidad_autonoma)
+ *   - tema (estilo, tipo de monumento → mapeado a theme)
+ *   - algoritmo de rotación: prioriza las menos usadas recientemente
+ *
+ * Query params: pais, region, theme, limit (default 5)
+ */
+app.get('/api/admin/social-accounts/suggest', async (req, res) => {
+    try {
+        const { pais, region, theme, limit = 5 } = req.query;
+        const maxAccounts = Math.min(parseInt(limit) || 5, 10);
+
+        // 1. Get "always" accounts (rotated: least recently used first)
+        const always = await db.query(`
+            SELECT * FROM social_accounts
+            WHERE activa = TRUE AND scope = 'always'
+            ORDER BY use_count ASC, last_used ASC NULLS FIRST, followers_approx DESC
+            LIMIT 3
+        `);
+
+        // 2. Get country-matching accounts
+        let countryAccounts = [];
+        if (pais) {
+            const r = await db.query(`
+                SELECT * FROM social_accounts
+                WHERE activa = TRUE AND scope = 'country' AND pais = $1
+                ORDER BY use_count ASC, last_used ASC NULLS FIRST, followers_approx DESC
+                LIMIT 3
+            `, [pais]);
+            countryAccounts = r.rows;
+        }
+
+        // 3. Get region-matching accounts
+        let regionAccounts = [];
+        if (region) {
+            const r = await db.query(`
+                SELECT * FROM social_accounts
+                WHERE activa = TRUE AND scope = 'region' AND region = $1
+                ORDER BY use_count ASC, last_used ASC NULLS FIRST, followers_approx DESC
+                LIMIT 2
+            `, [region]);
+            regionAccounts = r.rows;
+        }
+
+        // 4. Get theme-matching accounts
+        let themeAccounts = [];
+        if (theme) {
+            const r = await db.query(`
+                SELECT * FROM social_accounts
+                WHERE activa = TRUE AND scope = 'theme' AND (theme = $1 OR pais = $2 OR pais IS NULL)
+                ORDER BY use_count ASC, last_used ASC NULLS FIRST, followers_approx DESC
+                LIMIT 2
+            `, [theme, pais || '']);
+            themeAccounts = r.rows;
+        }
+
+        // 5. Merge and deduplicate, respecting the limit
+        const seen = new Set();
+        const result = [];
+
+        // Interleave: 2 always + 2 country + 1 region/theme
+        for (const list of [always.rows, countryAccounts, regionAccounts, themeAccounts]) {
+            for (const acc of list) {
+                if (!seen.has(acc.id) && result.length < maxAccounts) {
+                    seen.add(acc.id);
+                    result.push(acc);
+                }
+            }
+        }
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * POST /api/admin/social-accounts/mark-used
+ * Marca cuentas como "usadas" para el algoritmo de rotación.
+ * Body: { account_ids: [1, 2, 3] }
+ */
+app.post('/api/admin/social-accounts/mark-used', async (req, res) => {
+    try {
+        const { account_ids } = req.body;
+        if (!account_ids || !Array.isArray(account_ids) || account_ids.length === 0) {
+            return res.status(400).json({ error: 'account_ids es obligatorio (array)' });
+        }
+
+        const placeholders = account_ids.map((_, i) => `$${i + 1}`).join(',');
+        await db.query(`
+            UPDATE social_accounts
+            SET use_count = use_count + 1, last_used = NOW()
+            WHERE id IN (${placeholders})
+        `, account_ids);
+
+        res.json({ ok: true, marked: account_ids.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/social-accounts
+ * Lista todas las cuentas (para gestión en admin).
+ */
+app.get('/api/admin/social-accounts', async (req, res) => {
+    try {
+        const { rows } = await db.query(`
+            SELECT * FROM social_accounts
+            ORDER BY scope, pais NULLS LAST, display_name
+        `);
+        res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
