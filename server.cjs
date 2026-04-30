@@ -1506,7 +1506,7 @@ app.get('/api/filtros', async (req, res) => {
         const eventoPadreFiltro = req.query.evento_padre;
         const eventosWhere = eventoPadreFiltro
             ? `em.qid_evento IS NOT NULL AND em.qid_evento_padre = $${whereParams.length + 1} AND ${whereClause}`
-            : `em.qid_evento IS NOT NULL AND ${whereClause}`;
+            : `em.qid_evento IS NOT NULL AND em.qid_evento_padre IS NOT NULL AND ${whereClause}`;
         const eventosParams = eventoPadreFiltro ? [...whereParams, eventoPadreFiltro] : whereParams;
 
         const eventosR = await db.query(`
