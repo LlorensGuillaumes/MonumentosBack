@@ -1547,6 +1547,7 @@ app.get('/api/filtros', async (req, res) => {
             'Q6534':    'Revolución Francesa',
             'Q66344':   'Revolución Industrial',
             'Q166713':  'Risorgimento',
+            'Q8065':    'Desastres naturales',
         };
         for (const row of eventosPadresR.rows) {
             row.label = PADRE_LABELS[row.value] || row.value;
