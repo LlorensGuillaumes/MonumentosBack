@@ -4,6 +4,18 @@
  */
 require('dotenv').config();
 
+// Global error handlers — evitar que el proceso muera por errores no capturados
+process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT EXCEPTION]', err.message);
+    console.error(err.stack);
+    // No matamos el proceso, solo logueamos
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]', reason);
+    // No matamos el proceso, solo logueamos
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -32,15 +44,17 @@ const JWT_EXPIRES_IN = '30d';
 const ALLOWED_ORIGINS = [
     'https://patrimonio-europeo.netlify.app',
     'https://shiny-licorice-a01ea4.netlify.app',
-    'http://localhost:5173',
-    'http://localhost:3000',
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []),
 ];
+
+// localhost/127.0.0.1 with any port is allowed (dev environments)
+const isLocalhost = (origin) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+const isAllowed = (origin) => ALLOWED_ORIGINS.includes(origin) || isLocalhost(origin);
 
 // Block unauthorized origins (server-side enforcement, not just CORS headers)
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    if (origin && !isAllowed(origin)) {
         return res.status(403).json({ error: 'Origin not allowed' });
     }
     next();
@@ -48,7 +62,7 @@ app.use((req, res, next) => {
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        if (!origin || isAllowed(origin)) return callback(null, true);
         callback(null, false);
     },
 }));
@@ -346,17 +360,37 @@ function normalizarEstilos(rawRows) {
 }
 
 function applyClasificacionFilter(clasificacion, where, params, piRef) {
-    if (clasificacion === 'otros') {
-        const placeholders = ALL_CLASSIFIED_TIPOS.map(() => `$${piRef.value++}`);
-        where.push(`(b.tipo_monumento IS NULL OR b.tipo_monumento NOT IN (${placeholders.join(',')}))`);
-        params.push(...ALL_CLASSIFIED_TIPOS);
-        return;
+    // Soporta valor único ("religiosa") o múltiples separados por comas ("religiosa,militar")
+    const keys = String(clasificacion).split(',').map(s => s.trim()).filter(Boolean);
+    if (keys.length === 0) return;
+
+    const includeOtros = keys.includes('otros');
+    const tiposExplicitos = new Set();
+    for (const k of keys) {
+        if (k === 'otros') continue;
+        const valores = CLASIFICACION_GRUPOS[k];
+        if (valores) valores.forEach(v => tiposExplicitos.add(v));
     }
-    const valores = CLASIFICACION_GRUPOS[clasificacion];
-    if (valores && valores.length) {
-        const placeholders = valores.map(() => `$${piRef.value++}`);
-        where.push(`b.tipo_monumento IN (${placeholders.join(',')})`);
-        params.push(...valores);
+
+    const tiposArr = Array.from(tiposExplicitos);
+    const conditions = [];
+
+    if (tiposArr.length > 0) {
+        const placeholders = tiposArr.map(() => `$${piRef.value++}`);
+        conditions.push(`b.tipo_monumento IN (${placeholders.join(',')})`);
+        params.push(...tiposArr);
+    }
+
+    if (includeOtros) {
+        const placeholders = ALL_CLASSIFIED_TIPOS.map(() => `$${piRef.value++}`);
+        conditions.push(`(b.tipo_monumento IS NULL OR b.tipo_monumento NOT IN (${placeholders.join(',')}))`);
+        params.push(...ALL_CLASSIFIED_TIPOS);
+    }
+
+    if (conditions.length === 1) {
+        where.push(conditions[0]);
+    } else if (conditions.length > 1) {
+        where.push(`(${conditions.join(' OR ')})`);
     }
 }
 
@@ -863,12 +897,17 @@ const RELEVANCE_SCORE = `(
     + CASE WHEN w.commons_category IS NOT NULL THEN 3 ELSE 0 END
 )`;
 
+// Quita caracteres iniciales no alfabéticos (comillas, paréntesis, etc.)
+// para que el ordenamiento alfabético funcione correctamente
+const NORM_NAME = `LOWER(regexp_replace(b.denominacion, '^[^a-zA-Z0-9áéíóúñçàèìòùäëïöüÁÉÍÓÚÑÇÀÈÌÒÙÄËÏÖÜ]+', '', 'g'))`;
+const NORM_MUN = `LOWER(regexp_replace(b.municipio, '^[^a-zA-Z0-9áéíóúñçàèìòùäëïöüÁÉÍÓÚÑÇÀÈÌÒÙÄËÏÖÜ]+', '', 'g'))`;
+
 const SORT_OPTIONS = {
-    'relevancia':     `${RELEVANCE_SCORE} DESC, LOWER(b.denominacion) ASC`,
-    'nombre_asc':     'LOWER(b.denominacion) ASC',
-    'nombre_desc':    'LOWER(b.denominacion) DESC',
-    'municipio_asc':  'LOWER(b.municipio) ASC, LOWER(b.denominacion) ASC',
-    'municipio_desc': 'LOWER(b.municipio) DESC, LOWER(b.denominacion) ASC',
+    'relevancia':     `${RELEVANCE_SCORE} DESC, ${NORM_NAME} ASC`,
+    'nombre_asc':     `${NORM_NAME} ASC`,
+    'nombre_desc':    `${NORM_NAME} DESC`,
+    'municipio_asc':  `${NORM_MUN} ASC, ${NORM_NAME} ASC`,
+    'municipio_desc': `${NORM_MUN} DESC, ${NORM_NAME} ASC`,
 };
 
 // ============== ENDPOINTS ==============
@@ -967,10 +1006,14 @@ app.get('/api/monumentos', async (req, res) => {
             where.push(`b.tipo_monumento = $${pi++}`);
             params.push(req.query.tipo_monumento);
         }
-        if (req.query.clasificacion && (CLASIFICACION_GRUPOS[req.query.clasificacion] || req.query.clasificacion === 'otros')) {
-            const piRef = { value: pi };
-            applyClasificacionFilter(req.query.clasificacion, where, params, piRef);
-            pi = piRef.value;
+        if (req.query.clasificacion) {
+            const tokens = String(req.query.clasificacion).split(',').map(s => s.trim()).filter(Boolean);
+            const validTokens = tokens.filter(t => CLASIFICACION_GRUPOS[t] || t === 'otros');
+            if (validTokens.length > 0) {
+                const piRef = { value: pi };
+                applyClasificacionFilter(validTokens.join(','), where, params, piRef);
+                pi = piRef.value;
+            }
         }
         if (req.query.periodo) {
             where.push(`b.periodo = $${pi++}`);
@@ -1231,10 +1274,14 @@ app.get('/api/geojson', async (req, res) => {
             where.push(`b.tipo_monumento = $${pi++}`);
             params.push(req.query.tipo_monumento);
         }
-        if (req.query.clasificacion && (CLASIFICACION_GRUPOS[req.query.clasificacion] || req.query.clasificacion === 'otros')) {
-            const piRef = { value: pi };
-            applyClasificacionFilter(req.query.clasificacion, where, params, piRef);
-            pi = piRef.value;
+        if (req.query.clasificacion) {
+            const tokens = String(req.query.clasificacion).split(',').map(s => s.trim()).filter(Boolean);
+            const validTokens = tokens.filter(t => CLASIFICACION_GRUPOS[t] || t === 'otros');
+            if (validTokens.length > 0) {
+                const piRef = { value: pi };
+                applyClasificacionFilter(validTokens.join(','), where, params, piRef);
+                pi = piRef.value;
+            }
         }
         if (req.query.periodo) {
             where.push(`b.periodo = $${pi++}`);
