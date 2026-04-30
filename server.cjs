@@ -1039,6 +1039,9 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.solo_imagen === 'true') {
             where.push('w.imagen_url IS NOT NULL');
         }
+        if (req.query.sin_imagen === 'true') {
+            where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
+        }
         if (req.query.bbox) {
             const [minLon, minLat, maxLon, maxLat] = req.query.bbox.split(',').map(parseFloat);
             if (!isNaN(minLon) && !isNaN(minLat) && !isNaN(maxLon) && !isNaN(maxLat)) {
@@ -1306,6 +1309,9 @@ app.get('/api/geojson', async (req, res) => {
         }
         if (req.query.solo_imagen === 'true') {
             where.push('w.imagen_url IS NOT NULL');
+        }
+        if (req.query.sin_imagen === 'true') {
+            where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
         if (req.query.bbox) {
             const [minLon, minLat, maxLon, maxLat] = req.query.bbox.split(',').map(parseFloat);
