@@ -1431,7 +1431,7 @@ app.get('/api/filtros', async (req, res) => {
         if (pais) {
             regionesR = await db.query(`
                 SELECT comunidad_autonoma as value, pais, COUNT(*) as count
-                FROM bienes WHERE comunidad_autonoma IS NOT NULL AND pais = ?
+                FROM bienes WHERE comunidad_autonoma IS NOT NULL AND pais = $1
                 GROUP BY comunidad_autonoma, pais ORDER BY LOWER(comunidad_autonoma)
             `, [pais]);
         } else {
