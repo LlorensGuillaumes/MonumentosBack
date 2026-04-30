@@ -1575,27 +1575,60 @@ app.get('/api/filtros', async (req, res) => {
  */
 app.get('/api/ccaa-resumen', async (req, res) => {
     try {
-        let whereExtra = '';
-        let queryParams = [];
+        let where = ['b.comunidad_autonoma IS NOT NULL', 'b.latitud IS NOT NULL'];
+        let params = [];
         let pi = 1;
-        if (req.query.pais) {
-            whereExtra = ` AND pais = $${pi++}`;
-            queryParams.push(req.query.pais);
+        if (req.query.pais)       { where.push(`b.pais = $${pi++}`);              params.push(req.query.pais); }
+        if (req.query.region)     { where.push(`b.comunidad_autonoma = $${pi++}`); params.push(req.query.region); }
+        if (req.query.provincia)  { where.push(`b.provincia = $${pi++}`);          params.push(req.query.provincia); }
+        if (req.query.municipio)  { where.push(`b.municipio = $${pi++}`);          params.push(req.query.municipio); }
+        if (req.query.tipo_monumento) { where.push(`b.tipo_monumento = $${pi++}`); params.push(req.query.tipo_monumento); }
+        if (req.query.periodo)    { where.push(`b.periodo = $${pi++}`);            params.push(req.query.periodo); }
+        if (req.query.clasificacion) {
+            const tokens = String(req.query.clasificacion).split(',').map(s => s.trim()).filter(Boolean);
+            const validTokens = tokens.filter(t => CLASIFICACION_GRUPOS[t] || t === 'otros');
+            if (validTokens.length > 0) {
+                const piRef = { value: pi };
+                applyClasificacionFilter(validTokens.join(','), where, params, piRef);
+                pi = piRef.value;
+            }
+        }
+        if (req.query.estilo) {
+            where.push(`EXISTS (SELECT 1 FROM wikidata w WHERE w.bien_id = b.id AND w.estilo ILIKE $${pi++})`);
+            params.push(`%${req.query.estilo}%`);
+        }
+        if (req.query.evento) {
+            where.push(`EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id AND em.qid_evento = $${pi++})`);
+            params.push(req.query.evento);
+        }
+        if (req.query.evento_padre) {
+            where.push(`EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id AND em.qid_evento_padre = $${pi++})`);
+            params.push(req.query.evento_padre);
+        }
+        if (req.query.q) {
+            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+            params.push(`%${req.query.q}%`);
+        }
+        if (req.query.solo_wikidata === 'true') {
+            where.push('EXISTS (SELECT 1 FROM wikidata w WHERE w.bien_id = b.id AND w.qid IS NOT NULL)');
+        }
+        if (req.query.solo_imagen === 'true') {
+            where.push('EXISTS (SELECT 1 FROM imagenes i WHERE i.bien_id = b.id)');
         }
 
         const resumenR = await db.query(`
             SELECT
-                comunidad_autonoma as region,
-                pais,
+                b.comunidad_autonoma as region,
+                b.pais,
                 COUNT(*) as total,
-                SUM(CASE WHEN latitud IS NOT NULL THEN 1 ELSE 0 END) as con_coords,
-                AVG(latitud) as lat_centro,
-                AVG(longitud) as lon_centro
-            FROM bienes
-            WHERE comunidad_autonoma IS NOT NULL AND latitud IS NOT NULL${whereExtra}
-            GROUP BY comunidad_autonoma, pais
+                COUNT(*) as con_coords,
+                AVG(b.latitud) as lat_centro,
+                AVG(b.longitud) as lon_centro
+            FROM bienes b
+            WHERE ${where.join(' AND ')}
+            GROUP BY b.comunidad_autonoma, b.pais
             ORDER BY total DESC
-        `, queryParams);
+        `, params);
 
         // Centros aproximados de cada CCAA/región
         const centros = {
