@@ -1510,7 +1510,10 @@ app.get('/api/filtros', async (req, res) => {
         const eventosParams = eventoPadreFiltro ? [...whereParams, eventoPadreFiltro] : whereParams;
 
         const eventosR = await db.query(`
-            SELECT em.qid_evento as value, em.qid_evento_padre as padre, COUNT(DISTINCT em.bien_id) as count
+            SELECT em.qid_evento as value,
+                   em.qid_evento_padre as padre,
+                   MIN(em.evento) as label,
+                   COUNT(DISTINCT em.bien_id) as count
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
             WHERE ${eventosWhere}
@@ -1519,12 +1522,35 @@ app.get('/api/filtros', async (req, res) => {
 
         // Categorías padre con su contador agregado
         const eventosPadresR = await db.query(`
-            SELECT em.qid_evento_padre as value, COUNT(DISTINCT em.bien_id) as count
+            SELECT em.qid_evento_padre as value,
+                   COUNT(DISTINCT em.bien_id) as count
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
             WHERE em.qid_evento_padre IS NOT NULL AND ${whereClause}
             GROUP BY em.qid_evento_padre ORDER BY count DESC
         `, whereParams);
+
+        // Hardcoded labels para las categorías padre (fallback si i18n no traduce)
+        const PADRE_LABELS = {
+            'Q10859':   'Guerra Civil Española',
+            'Q152499':  'Guerra de Independencia Española',
+            'Q150701':  'Guerra de Sucesión Española',
+            'Q79791':   'Reconquista',
+            'Q1178424': 'Guerras Carlistas',
+            'Q1501724': 'Guerra de Restauración portuguesa',
+            'Q2105495': 'Crisis de 1383-1385',
+            'Q164432':  'Guerra de los Ochenta Años',
+            'Q51657':   'Cruzada albigense',
+            'Q78994':   'Guerras Napoleónicas',
+            'Q362':     'Segunda Guerra Mundial',
+            'Q1200506': 'Desamortización española',
+            'Q6534':    'Revolución Francesa',
+            'Q66344':   'Revolución Industrial',
+            'Q166713':  'Risorgimento',
+        };
+        for (const row of eventosPadresR.rows) {
+            row.label = PADRE_LABELS[row.value] || row.value;
+        }
 
         res.json({
             paises: paisesR.rows,
