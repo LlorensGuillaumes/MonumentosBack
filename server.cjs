@@ -1502,13 +1502,20 @@ app.get('/api/filtros', async (req, res) => {
         }
 
         // Eventos históricos filtrados (value = qid_evento para i18n)
+        // Si hay filtro evento_padre, restringir la lista de eventos a sus hijos
+        const eventoPadreFiltro = req.query.evento_padre;
+        const eventosWhere = eventoPadreFiltro
+            ? `em.qid_evento IS NOT NULL AND em.qid_evento_padre = $${whereParams.length + 1} AND ${whereClause}`
+            : `em.qid_evento IS NOT NULL AND ${whereClause}`;
+        const eventosParams = eventoPadreFiltro ? [...whereParams, eventoPadreFiltro] : whereParams;
+
         const eventosR = await db.query(`
             SELECT em.qid_evento as value, em.qid_evento_padre as padre, COUNT(DISTINCT em.bien_id) as count
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
-            WHERE em.qid_evento IS NOT NULL AND ${whereClause}
+            WHERE ${eventosWhere}
             GROUP BY em.qid_evento, em.qid_evento_padre ORDER BY count DESC
-        `, whereParams);
+        `, eventosParams);
 
         // Categorías padre con su contador agregado
         const eventosPadresR = await db.query(`
