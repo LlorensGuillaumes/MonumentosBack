@@ -3151,7 +3151,11 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         );
 
         if (!wikiResponse.ok) {
-            return res.status(502).json({ error: 'Error al obtener datos de Wikipedia' });
+            // Si Wikipedia da 429 o similar y tenemos cache (en cualquier idioma), devolverlo como fallback
+            if (row.descripcion && row.descripcion.length > 100) {
+                return res.json({ extract: row.descripcion, source: 'cache-fallback', lang: cachedLang });
+            }
+            return res.status(502).json({ error: 'Error al obtener datos de Wikipedia', upstream: wikiResponse.status });
         }
 
         const wikiData = await wikiResponse.json();
