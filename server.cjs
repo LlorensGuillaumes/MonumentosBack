@@ -3096,9 +3096,10 @@ app.get('/api/imagenes/:id/archivo', async (req, res) => {
 app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
     try {
         const id = parseInt(req.params.id);
+        const requestedLang = req.query.lang || 'es';
 
         const result = await db.query(
-            'SELECT wikipedia_url, descripcion FROM wikidata WHERE bien_id = ?',
+            'SELECT wikipedia_url, qid, descripcion FROM wikidata WHERE bien_id = $1',
             [id]
         );
         const row = result.rows[0];
@@ -3107,23 +3108,45 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
             return res.status(404).json({ error: 'No hay URL de Wikipedia para este monumento' });
         }
 
-        // Si ya tenemos descripción larga en DB, devolver directamente (cache)
-        if (row.descripcion && row.descripcion.length > 200) {
-            return res.json({ extract: row.descripcion, source: 'cache', lang: null });
-        }
-
-        // Extraer idioma y título de la URL de Wikipedia
+        // Extraer idioma y título de la URL guardada
         const urlMatch = row.wikipedia_url.match(/^https?:\/\/([a-z]+)\.wikipedia\.org\/wiki\/(.+)$/i);
         if (!urlMatch) {
             return res.status(400).json({ error: 'URL de Wikipedia no válida' });
         }
 
-        const lang = urlMatch[1];
-        const title = urlMatch[2];
+        const cachedLang = urlMatch[1];
+        const cachedTitle = urlMatch[2];
 
-        // Llamar a la API REST de Wikipedia
+        // Cache: solo válido si el idioma pedido coincide con el de la URL guardada
+        if (requestedLang === cachedLang && row.descripcion && row.descripcion.length > 200) {
+            return res.json({ extract: row.descripcion, source: 'cache', lang: cachedLang });
+        }
+
+        // Resolver título en idioma pedido vía Wikidata sitelinks (si el QID existe)
+        let targetLang = cachedLang;
+        let targetTitle = cachedTitle;
+        if (requestedLang !== cachedLang && row.qid) {
+            try {
+                const wd = await fetch(
+                    `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${row.qid}&props=sitelinks&sitefilter=${requestedLang}wiki&format=json`,
+                    { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } }
+                );
+                if (wd.ok) {
+                    const wdJson = await wd.json();
+                    const sitelink = wdJson?.entities?.[row.qid]?.sitelinks?.[`${requestedLang}wiki`];
+                    if (sitelink?.title) {
+                        targetLang = requestedLang;
+                        targetTitle = encodeURIComponent(sitelink.title.replace(/ /g, '_'));
+                    }
+                }
+            } catch (e) {
+                // Fallback a la URL original
+            }
+        }
+
+        // Llamar Wikipedia REST API
         const wikiResponse = await fetch(
-            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(title))}`,
+            `https://${targetLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(targetTitle))}`,
             { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } }
         );
 
@@ -3138,17 +3161,19 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
             return res.status(404).json({ error: 'No se encontró extracto en Wikipedia' });
         }
 
-        // Guardar en DB como cache para futuras peticiones
-        try {
-            await db.query(
-                'UPDATE wikidata SET descripcion = ? WHERE bien_id = ?',
-                [extract, id]
-            );
-        } catch (dbErr) {
-            console.error(`[Wikipedia] Error guardando cache para bien_id=${id}: ${dbErr.message}`);
+        // Solo cachear si servimos en el mismo idioma que la URL original
+        if (targetLang === cachedLang) {
+            try {
+                await db.query(
+                    'UPDATE wikidata SET descripcion = $1 WHERE bien_id = $2',
+                    [extract, id]
+                );
+            } catch (dbErr) {
+                console.error(`[Wikipedia] Error guardando cache bien_id=${id}: ${dbErr.message}`);
+            }
         }
 
-        res.json({ extract, source: 'wikipedia', lang });
+        res.json({ extract, source: 'wikipedia', lang: targetLang });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
