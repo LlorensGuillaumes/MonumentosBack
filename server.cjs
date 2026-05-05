@@ -2763,9 +2763,26 @@ app.get('/api/monumentos/:id/eventos', async (req, res) => {
  * GET /api/rutas-culturales
  * Listar rutas culturales activas
  */
-app.get('/api/rutas-culturales', async (_req, res) => {
+app.get('/api/rutas-culturales', async (req, res) => {
     try {
+        const lang = req.query.lang;
         const rutas = await db.obtenerRutasCulturales();
+        // Si se pide un idioma, hacer JOIN con traducciones (fallback a original si no hay)
+        if (lang && lang !== 'es') {
+            const ids = rutas.map(r => r.id);
+            if (ids.length === 0) return res.json(rutas);
+            const tradsR = await db.query(
+                `SELECT ruta_id, nombre, descripcion FROM rutas_culturales_traducciones
+                 WHERE lang = $1 AND ruta_id = ANY($2::int[])`,
+                [lang, ids]
+            );
+            const trads = Object.fromEntries(tradsR.rows.map(t => [t.ruta_id, t]));
+            const out = rutas.map(r => trads[r.id]
+                ? { ...r, nombre: trads[r.id].nombre, descripcion: trads[r.id].descripcion }
+                : r
+            );
+            return res.json(out);
+        }
         res.json(rutas);
     } catch (err) {
         res.status(500).json({ error: err.message });
