@@ -1031,8 +1031,12 @@ app.get('/api/monumentos', async (req, res) => {
             where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
         }
         if (req.query.q) {
-            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
-            params.push(`%${req.query.q}%`);
+            // Tokenize by whitespace and join with % so "castillo olite" matches "Castillo de Olite"
+            const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
+            if (qTokenized) {
+                where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                params.push(`%${qTokenized}%`);
+            }
         }
         if (req.query.solo_coords === 'true') {
             where.push('b.latitud IS NOT NULL');
@@ -1306,8 +1310,12 @@ app.get('/api/geojson', async (req, res) => {
             where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
         }
         if (req.query.q) {
-            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
-            params.push(`%${req.query.q}%`);
+            // Tokenize by whitespace and join with % so "castillo olite" matches "Castillo de Olite"
+            const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
+            if (qTokenized) {
+                where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                params.push(`%${qTokenized}%`);
+            }
         }
         if (req.query.solo_coords === 'true') {
             where.push('b.latitud IS NOT NULL');
@@ -1606,8 +1614,12 @@ app.get('/api/ccaa-resumen', async (req, res) => {
             params.push(req.query.evento_padre);
         }
         if (req.query.q) {
-            where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
-            params.push(`%${req.query.q}%`);
+            // Tokenize by whitespace and join with % so "castillo olite" matches "Castillo de Olite"
+            const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
+            if (qTokenized) {
+                where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                params.push(`%${qTokenized}%`);
+            }
         }
         if (req.query.solo_wikidata === 'true') {
             where.push('EXISTS (SELECT 1 FROM wikidata w WHERE w.bien_id = b.id AND w.qid IS NOT NULL)');
