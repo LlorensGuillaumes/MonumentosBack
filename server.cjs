@@ -799,6 +799,147 @@ app.get('/api/admin/analytics/top-users', authMiddleware, adminMiddleware, async
     }
 });
 
+// ============== ANALYTICS DE TRAFICO (ingesta + agregados admin) ==============
+
+const crypto = require('crypto');
+
+function hashIp(ip) {
+    if (!ip) return null;
+    return crypto.createHash('sha256').update(ip + JWT_SECRET).digest('hex');
+}
+
+function detectDevice(userAgent) {
+    if (!userAgent) return null;
+    if (/iPad|Tablet|PlayBook|Silk/i.test(userAgent)) return 'tablet';
+    if (/Mobile|Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) return 'mobile';
+    return 'desktop';
+}
+
+const ALLOWED_EVENT_TYPES = new Set([
+    'pageview', 'monument_view', 'favorite_add', 'favorite_remove',
+    'route_create', 'route_save', 'search', 'external_click',
+    'compare_monuments', 'curated_route_view',
+]);
+
+/**
+ * POST /api/track
+ * Ingesta de eventos. Anónimo aceptado; si llega token Bearer válido, se asocia al usuario.
+ * Body: { event_type, url?, bien_id?, ruta_id?, metadata?, session_id? }
+ */
+app.post('/api/track', optionalAuth, async (req, res) => {
+    try {
+        const { event_type, url, bien_id, ruta_id, metadata, session_id } = req.body || {};
+        if (!event_type || !ALLOWED_EVENT_TYPES.has(event_type)) {
+            return res.status(400).json({ error: 'event_type inválido' });
+        }
+        const referrer = (req.body && req.body.referrer) || req.headers['referer'] || null;
+        const country = req.headers['cf-ipcountry'] || req.headers['x-vercel-ip-country'] || null;
+        const ip = (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+        const ipHash = hashIp(ip);
+        const device = detectDevice(req.headers['user-agent']);
+        const usuario_id = req.user?.id || null;
+        await db.trackEvent({
+            event_type,
+            url: url ? String(url).slice(0, 500) : null,
+            usuario_id,
+            bien_id: bien_id ? parseInt(bien_id) : null,
+            ruta_id: ruta_id ? parseInt(ruta_id) : null,
+            metadata: metadata || null,
+            referrer: referrer ? String(referrer).slice(0, 500) : null,
+            country: country ? String(country).slice(0, 2).toUpperCase() : null,
+            device,
+            ip_hash: ipHash,
+            session_id: session_id ? String(session_id).slice(0, 40) : null,
+        });
+        res.status(204).end();
+    } catch (err) {
+        console.error('track error:', err.message);
+        // No queremos romper la UI por un fallo de analytics — devolver 204 igual
+        res.status(204).end();
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/summary?dias=30
+ */
+app.get('/api/admin/analytics/traffic/summary', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const data = await db.obtenerTraficoSummary(dias);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/by-day?dias=30
+ */
+app.get('/api/admin/analytics/traffic/by-day', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const data = await db.obtenerTraficoPorDia(dias);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/top-urls?dias=30&limit=15
+ */
+app.get('/api/admin/analytics/traffic/top-urls', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 15));
+        const data = await db.obtenerTopUrls(dias, limit);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/top-referrers?dias=30&limit=15
+ */
+app.get('/api/admin/analytics/traffic/top-referrers', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 15));
+        const data = await db.obtenerTopReferrers(dias, limit);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/top-monumentos?dias=30&limit=15
+ */
+app.get('/api/admin/analytics/traffic/top-monumentos', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 15));
+        const data = await db.obtenerTopMonumentos(dias, limit);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/admin/analytics/traffic/top-acciones?dias=30
+ */
+app.get('/api/admin/analytics/traffic/top-acciones', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const dias = Math.min(365, Math.max(1, parseInt(req.query.dias) || 30));
+        const data = await db.obtenerTopAcciones(dias);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ============== FAVORITOS ENDPOINTS ==============
 
 /**

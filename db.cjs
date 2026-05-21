@@ -319,6 +319,22 @@ async function inicializarTablas() {
             autor TEXT,
             fuente TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            id BIGSERIAL PRIMARY KEY,
+            event_type VARCHAR(50) NOT NULL,
+            url TEXT,
+            usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+            bien_id INTEGER REFERENCES bienes(id) ON DELETE SET NULL,
+            ruta_id INTEGER,
+            metadata JSONB,
+            referrer TEXT,
+            country VARCHAR(2),
+            device VARCHAR(20),
+            ip_hash VARCHAR(64),
+            session_id VARCHAR(40),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
     `);
 
     await pool.query(`
@@ -362,6 +378,12 @@ async function inicializarTablas() {
         CREATE INDEX IF NOT EXISTS idx_rc_paradas_ruta ON rutas_culturales_paradas(ruta_id);
         CREATE INDEX IF NOT EXISTS idx_rc_paradas_bien ON rutas_culturales_paradas(bien_id);
         CREATE INDEX IF NOT EXISTS idx_rc_fotos_parada ON rutas_culturales_fotos(parada_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_type_time ON analytics_events(event_type, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_analytics_usuario ON analytics_events(usuario_id) WHERE usuario_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_analytics_bien ON analytics_events(bien_id) WHERE bien_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_analytics_url ON analytics_events(url);
+        CREATE INDEX IF NOT EXISTS idx_analytics_session ON analytics_events(session_id);
     `);
 
     // Add contenido column to imagenes if not exists (for locally uploaded images)
@@ -945,6 +967,166 @@ async function obtenerUsuariosMasActivos(limit = 10) {
         ORDER BY total_logins DESC
         LIMIT $1
     `, [limit]);
+    return result.rows;
+}
+
+// =========== ANALYTICS DE TRAFICO (page_views + acciones) ===========
+
+/**
+ * Registra un evento. Acepta event_type, url, usuario_id (opcional, null si anónimo),
+ * bien_id, ruta_id, metadata (JSON), referrer, country, device, ip_hash, session_id.
+ */
+async function trackEvent(data) {
+    await ensureInit();
+    const {
+        event_type, url = null, usuario_id = null, bien_id = null, ruta_id = null,
+        metadata = null, referrer = null, country = null, device = null,
+        ip_hash = null, session_id = null,
+    } = data;
+    if (!event_type) throw new Error('event_type required');
+    await getPool().query(`
+        INSERT INTO analytics_events
+        (event_type, url, usuario_id, bien_id, ruta_id, metadata, referrer, country, device, ip_hash, session_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [event_type, url, usuario_id, bien_id, ruta_id, metadata, referrer, country, device, ip_hash, session_id]);
+}
+
+/**
+ * Resumen agregado de tráfico para los últimos N días.
+ */
+async function obtenerTraficoSummary(dias = 30) {
+    await ensureInit();
+    const pool = getPool();
+    const [
+        totalEvents,
+        totalPageviews,
+        uniqueVisitors,
+        uniqueUsersLogged,
+        eventsHoy,
+        pageviewsHoy,
+        eventsByType,
+        countryBreakdown,
+        deviceBreakdown,
+    ] = await Promise.all([
+        pool.query(`SELECT COUNT(*)::int as n FROM analytics_events WHERE created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'`, [dias]),
+        pool.query(`SELECT COUNT(*)::int as n FROM analytics_events WHERE event_type = 'pageview' AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'`, [dias]),
+        pool.query(`SELECT COUNT(DISTINCT ip_hash)::int as n FROM analytics_events WHERE ip_hash IS NOT NULL AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'`, [dias]),
+        pool.query(`SELECT COUNT(DISTINCT usuario_id)::int as n FROM analytics_events WHERE usuario_id IS NOT NULL AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'`, [dias]),
+        pool.query(`SELECT COUNT(*)::int as n FROM analytics_events WHERE created_at >= CURRENT_DATE`),
+        pool.query(`SELECT COUNT(*)::int as n FROM analytics_events WHERE event_type = 'pageview' AND created_at >= CURRENT_DATE`),
+        pool.query(`SELECT event_type, COUNT(*)::int as n FROM analytics_events WHERE created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day' GROUP BY event_type ORDER BY n DESC`, [dias]),
+        pool.query(`SELECT country, COUNT(*)::int as n FROM analytics_events WHERE country IS NOT NULL AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day' GROUP BY country ORDER BY n DESC LIMIT 10`, [dias]),
+        pool.query(`SELECT device, COUNT(*)::int as n FROM analytics_events WHERE device IS NOT NULL AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day' GROUP BY device ORDER BY n DESC`, [dias]),
+    ]);
+    return {
+        dias,
+        total_events: totalEvents.rows[0].n,
+        total_pageviews: totalPageviews.rows[0].n,
+        unique_visitors: uniqueVisitors.rows[0].n,
+        unique_users_logged: uniqueUsersLogged.rows[0].n,
+        events_hoy: eventsHoy.rows[0].n,
+        pageviews_hoy: pageviewsHoy.rows[0].n,
+        by_event_type: eventsByType.rows,
+        by_country: countryBreakdown.rows,
+        by_device: deviceBreakdown.rows,
+    };
+}
+
+/**
+ * Series temporales: pageviews + unique visitors por día.
+ */
+async function obtenerTraficoPorDia(dias = 30) {
+    await ensureInit();
+    const result = await getPool().query(`
+        SELECT
+            DATE(created_at) as dia,
+            COUNT(*) FILTER (WHERE event_type = 'pageview')::int as pageviews,
+            COUNT(DISTINCT ip_hash) FILTER (WHERE ip_hash IS NOT NULL)::int as uniques,
+            COUNT(DISTINCT usuario_id) FILTER (WHERE usuario_id IS NOT NULL)::int as users_logged
+        FROM analytics_events
+        WHERE created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'
+        GROUP BY DATE(created_at)
+        ORDER BY dia
+    `, [dias]);
+    return result.rows;
+}
+
+/**
+ * Top URLs visitadas (event_type = 'pageview').
+ */
+async function obtenerTopUrls(dias = 30, limit = 15) {
+    await ensureInit();
+    const result = await getPool().query(`
+        SELECT url, COUNT(*)::int as views, COUNT(DISTINCT ip_hash)::int as uniques
+        FROM analytics_events
+        WHERE event_type = 'pageview'
+          AND url IS NOT NULL
+          AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'
+        GROUP BY url
+        ORDER BY views DESC
+        LIMIT $2
+    `, [dias, limit]);
+    return result.rows;
+}
+
+/**
+ * Top referrers (excluye los internos).
+ */
+async function obtenerTopReferrers(dias = 30, limit = 15) {
+    await ensureInit();
+    const result = await getPool().query(`
+        SELECT referrer, COUNT(*)::int as visits
+        FROM analytics_events
+        WHERE referrer IS NOT NULL
+          AND referrer != ''
+          AND referrer NOT LIKE '%patrimonio-europeo.netlify.app%'
+          AND referrer NOT LIKE '%patrimonioeuropeo.es%'
+          AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'
+        GROUP BY referrer
+        ORDER BY visits DESC
+        LIMIT $2
+    `, [dias, limit]);
+    return result.rows;
+}
+
+/**
+ * Top monumentos por veces consultados (event_type = 'monument_view').
+ */
+async function obtenerTopMonumentos(dias = 30, limit = 15) {
+    await ensureInit();
+    const result = await getPool().query(`
+        SELECT
+            ae.bien_id,
+            b.denominacion,
+            b.municipio,
+            b.pais,
+            COUNT(*)::int as views,
+            COUNT(DISTINCT ae.ip_hash)::int as uniques
+        FROM analytics_events ae
+        LEFT JOIN bienes b ON b.id = ae.bien_id
+        WHERE ae.event_type = 'monument_view'
+          AND ae.bien_id IS NOT NULL
+          AND ae.created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'
+        GROUP BY ae.bien_id, b.denominacion, b.municipio, b.pais
+        ORDER BY views DESC
+        LIMIT $2
+    `, [dias, limit]);
+    return result.rows;
+}
+
+/**
+ * Acciones (todo excepto pageview) agrupadas y desglosadas.
+ */
+async function obtenerTopAcciones(dias = 30) {
+    await ensureInit();
+    const result = await getPool().query(`
+        SELECT event_type, COUNT(*)::int as total, COUNT(DISTINCT usuario_id)::int as usuarios_distintos
+        FROM analytics_events
+        WHERE event_type != 'pageview'
+          AND created_at >= CURRENT_DATE - $1::int * INTERVAL '1 day'
+        GROUP BY event_type
+        ORDER BY total DESC
+    `, [dias]);
     return result.rows;
 }
 
@@ -1614,6 +1796,13 @@ module.exports = {
     obtenerRegistrosPorTiempo,
     obtenerLoginsPorDia,
     obtenerUsuariosMasActivos,
+    trackEvent,
+    obtenerTraficoSummary,
+    obtenerTraficoPorDia,
+    obtenerTopUrls,
+    obtenerTopReferrers,
+    obtenerTopMonumentos,
+    obtenerTopAcciones,
     crearPropuesta,
     insertarPropuestaImagen,
     obtenerMisPropuestas,
