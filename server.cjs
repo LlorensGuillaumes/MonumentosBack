@@ -1059,6 +1059,18 @@ const RELEVANCE_SCORE = `(
     + CASE WHEN w.arquitecto IS NOT NULL THEN 1 ELSE 0 END
     + CASE WHEN w.inception IS NOT NULL THEN 3 ELSE 0 END
     + CASE WHEN w.commons_category IS NOT NULL THEN 3 ELSE 0 END
+    + CASE
+        WHEN b.heritage_world = 'both'    THEN 50
+        WHEN b.heritage_world = 'unesco'  THEN 40
+        WHEN b.heritage_world = 'european' THEN 25
+        ELSE 0
+    END
+    + CASE
+        WHEN LENGTH(b.denominacion) <= 25 THEN 8
+        WHEN LENGTH(b.denominacion) <= 40 THEN 4
+        WHEN LENGTH(b.denominacion) >= 60 THEN -3
+        ELSE 0
+    END
 )`;
 
 // Quita caracteres iniciales no alfabéticos (comillas, paréntesis, etc.)
