@@ -1417,7 +1417,7 @@ app.get('/api/monumentos/:id', async (req, res) => {
         }
 
         const [imagenesResult, eventos] = await Promise.all([
-            db.query('SELECT url, titulo, autor, fuente FROM imagenes WHERE bien_id = ?', [id]),
+            db.query('SELECT url, titulo, autor, fuente, metadata FROM imagenes WHERE bien_id = ?', [id]),
             db.obtenerEventosMonumento(id),
         ]);
 
