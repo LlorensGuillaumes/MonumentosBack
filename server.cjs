@@ -3066,8 +3066,10 @@ app.post('/api/rutas/optimizar', authMiddleware, premiumMiddleware, async (req, 
         if (paradas.length > 25) return res.status(400).json({ error: 'Máximo 25 paradas' });
 
         // Build coordinates string for OSRM
+        // source=first: mantenemos el primer monumento como punto de partida (UX esperado)
+        // destination=any: dejamos que OSRM elija el final óptimo
         const coords = paradas.map(p => `${p.longitud},${p.latitud}`).join(';');
-        const osrmUrl = `https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=false&source=first&destination=last&geometries=geojson&overview=full`;
+        const osrmUrl = `https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=false&source=first&destination=any&geometries=geojson&overview=full`;
 
         const osrmRes = await fetch(osrmUrl);
         if (!osrmRes.ok) {
@@ -3082,9 +3084,13 @@ app.post('/api/rutas/optimizar', authMiddleware, premiumMiddleware, async (req, 
         const trip = osrmData.trips?.[0];
         if (!trip) return res.status(502).json({ error: 'No se encontró ruta' });
 
-        // Map waypoint order
+        // OSRM devuelve waypoints en orden de entrada con waypoint_index = posición en el trip.
+        // Convertimos a "índices de paradas originales en el orden optimizado del trip".
         const waypoints = osrmData.waypoints || [];
-        const order = waypoints.map(wp => wp.waypoint_index);
+        const order = waypoints
+            .map((wp, originalIdx) => ({ originalIdx, tripPos: wp.waypoint_index }))
+            .sort((a, b) => a.tripPos - b.tripPos)
+            .map(x => x.originalIdx);
 
         res.json({
             distancia_km: Math.round(trip.distance / 1000 * 10) / 10,
