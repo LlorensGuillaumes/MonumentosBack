@@ -1214,6 +1214,15 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.sin_imagen === 'true') {
             where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
+        if (req.query.heritage_world) {
+            const hw = req.query.heritage_world;
+            if (hw === 'any') {
+                where.push('b.heritage_world IS NOT NULL');
+            } else if (['unesco', 'european'].includes(hw)) {
+                where.push(`(b.heritage_world = $${pi++} OR b.heritage_world = 'both')`);
+                params.push(hw);
+            }
+        }
         if (req.query.bbox) {
             const [minLon, minLat, maxLon, maxLat] = req.query.bbox.split(',').map(parseFloat);
             if (!isNaN(minLon) && !isNaN(minLat) && !isNaN(maxLon) && !isNaN(maxLat)) {
@@ -1246,7 +1255,7 @@ app.get('/api/monumentos', async (req, res) => {
                         b.provincia, b.comarca, b.municipio, b.localidad,
                         b.latitud, b.longitud, b.coords_precision,
                         b.comunidad_autonoma, b.pais,
-                        b.tipo_monumento, b.periodo,
+                        b.tipo_monumento, b.periodo, b.heritage_world,
                         w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                         w.heritage_label, w.wikipedia_url,
                         ${RELEVANCE_SCORE} as _score,
@@ -1259,7 +1268,7 @@ app.get('/api/monumentos', async (req, res) => {
                 SELECT id, denominacion, tipo, clase, categoria, provincia, comarca,
                        municipio, localidad, latitud, longitud, coords_precision,
                        comunidad_autonoma, pais,
-                       tipo_monumento, periodo,
+                       tipo_monumento, periodo, heritage_world,
                        qid, descripcion, imagen_url, estilo, arquitecto, heritage_label, wikipedia_url
                 FROM scored
                 ORDER BY country_rank, _score DESC, LOWER(denominacion)
@@ -1272,7 +1281,7 @@ app.get('/api/monumentos', async (req, res) => {
                     b.provincia, b.comarca, b.municipio, b.localidad,
                     b.latitud, b.longitud, b.coords_precision,
                     b.comunidad_autonoma, b.pais,
-                    b.tipo_monumento, b.periodo,
+                    b.tipo_monumento, b.periodo, b.heritage_world,
                     w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                     w.heritage_label, w.wikipedia_url
                 FROM bienes b
@@ -1526,7 +1535,7 @@ app.get('/api/geojson', async (req, res) => {
                 b.id, b.denominacion, b.tipo, b.categoria,
                 b.municipio, b.provincia, b.comunidad_autonoma, b.pais,
                 b.latitud, b.longitud, b.coords_precision,
-                b.tipo_monumento, b.periodo,
+                b.tipo_monumento, b.periodo, b.heritage_world,
                 w.qid, w.imagen_url, w.estilo
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
@@ -1560,6 +1569,7 @@ app.get('/api/geojson', async (req, res) => {
                     tipo_monumento: item.tipo_monumento,
                     periodo: item.periodo,
                     coords_precision: item.coords_precision,
+                    heritage_world: item.heritage_world,
                 },
             })),
         };
