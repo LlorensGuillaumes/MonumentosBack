@@ -815,6 +815,29 @@ function detectDevice(userAgent) {
     return 'desktop';
 }
 
+// Elimina parámetros de tracking de la URL para que /monumento/X?fbclid=A y
+// /monumento/X?fbclid=B se cuenten como la misma página en analytics.
+const TRACKING_PARAMS = new Set([
+    'fbclid', 'gclid', 'msclkid', 'dclid', 'igshid',
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    '_ga', 'mc_cid', 'mc_eid', 'ref', 'ref_src', 'ref_url',
+]);
+
+function cleanUrl(url) {
+    if (!url) return null;
+    try {
+        // base dummy permite parsear paths relativos ("/foo?x=1")
+        const u = new URL(url, 'https://x.local');
+        for (const p of [...u.searchParams.keys()]) {
+            if (TRACKING_PARAMS.has(p)) u.searchParams.delete(p);
+        }
+        const search = u.searchParams.toString();
+        return u.pathname + (search ? '?' + search : '') + (u.hash || '');
+    } catch {
+        return String(url).slice(0, 500);
+    }
+}
+
 const ALLOWED_EVENT_TYPES = new Set([
     'pageview', 'monument_view', 'favorite_add', 'favorite_remove',
     'route_create', 'route_save', 'search', 'external_click',
@@ -840,7 +863,7 @@ app.post('/api/track', optionalAuth, async (req, res) => {
         const usuario_id = req.user?.id || null;
         await db.trackEvent({
             event_type,
-            url: url ? String(url).slice(0, 500) : null,
+            url: url ? cleanUrl(String(url)).slice(0, 500) : null,
             usuario_id,
             bien_id: bien_id ? parseInt(bien_id) : null,
             ruta_id: ruta_id ? parseInt(ruta_id) : null,
@@ -1221,7 +1244,8 @@ app.get('/api/monumentos', async (req, res) => {
                     SELECT
                         b.id, b.denominacion, b.tipo, b.clase, b.categoria,
                         b.provincia, b.comarca, b.municipio, b.localidad,
-                        b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
+                        b.latitud, b.longitud, b.coords_precision,
+                        b.comunidad_autonoma, b.pais,
                         b.tipo_monumento, b.periodo,
                         w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                         w.heritage_label, w.wikipedia_url,
@@ -1233,7 +1257,8 @@ app.get('/api/monumentos', async (req, res) => {
                     ${whereClause}
                 )
                 SELECT id, denominacion, tipo, clase, categoria, provincia, comarca,
-                       municipio, localidad, latitud, longitud, comunidad_autonoma, pais,
+                       municipio, localidad, latitud, longitud, coords_precision,
+                       comunidad_autonoma, pais,
                        tipo_monumento, periodo,
                        qid, descripcion, imagen_url, estilo, arquitecto, heritage_label, wikipedia_url
                 FROM scored
@@ -1245,7 +1270,8 @@ app.get('/api/monumentos', async (req, res) => {
                 SELECT
                     b.id, b.denominacion, b.tipo, b.clase, b.categoria,
                     b.provincia, b.comarca, b.municipio, b.localidad,
-                    b.latitud, b.longitud, b.comunidad_autonoma, b.pais,
+                    b.latitud, b.longitud, b.coords_precision,
+                    b.comunidad_autonoma, b.pais,
                     b.tipo_monumento, b.periodo,
                     w.qid, w.descripcion, COALESCE(w.imagen_url, img.url) as imagen_url, w.estilo, w.arquitecto,
                     w.heritage_label, w.wikipedia_url
@@ -1499,7 +1525,8 @@ app.get('/api/geojson', async (req, res) => {
             SELECT
                 b.id, b.denominacion, b.tipo, b.categoria,
                 b.municipio, b.provincia, b.comunidad_autonoma, b.pais,
-                b.latitud, b.longitud, b.tipo_monumento, b.periodo,
+                b.latitud, b.longitud, b.coords_precision,
+                b.tipo_monumento, b.periodo,
                 w.qid, w.imagen_url, w.estilo
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
@@ -1532,6 +1559,7 @@ app.get('/api/geojson', async (req, res) => {
                     estilo: item.estilo,
                     tipo_monumento: item.tipo_monumento,
                     periodo: item.periodo,
+                    coords_precision: item.coords_precision,
                 },
             })),
         };
