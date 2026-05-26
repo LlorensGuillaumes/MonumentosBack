@@ -3326,7 +3326,25 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         const cachedLang = urlMatch[1];
         const cachedTitle = urlMatch[2];
 
-        // Cache: solo válido si el idioma pedido coincide con el de la URL guardada
+        // Lookup en BD secundaria de enriquecimiento (full_text rico de Wikipedia)
+        // Si está disponible y el idioma coincide con el cacheado, devolverlo prioritariamente
+        if (requestedLang === cachedLang) {
+            const enrichRes = await db.queryEnrichment(
+                'SELECT extract, full_text, lang FROM wikipedia_extracts WHERE bien_id = $1',
+                [id]
+            );
+            const enrichRow = enrichRes && enrichRes.rows[0];
+            if (enrichRow && enrichRow.full_text && enrichRow.full_text.length > 200) {
+                return res.json({
+                    extract: enrichRow.extract || enrichRow.full_text.slice(0, 1500),
+                    full_text: enrichRow.full_text,
+                    source: 'enrichment',
+                    lang: enrichRow.lang || cachedLang,
+                });
+            }
+        }
+
+        // Cache primario (wikidata.descripcion): solo válido si idioma coincide
         if (requestedLang === cachedLang && row.descripcion && row.descripcion.length > 200) {
             return res.json({ extract: row.descripcion, source: 'cache', lang: cachedLang });
         }

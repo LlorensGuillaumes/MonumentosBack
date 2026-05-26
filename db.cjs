@@ -5,6 +5,7 @@ require('dotenv').config();
 types.setTypeParser(20, parseInt);
 
 let _pool = null;
+let _enrichmentPool = null;
 let _initialized = false;
 
 function getPool() {
@@ -25,6 +26,35 @@ function getPool() {
         }
     }
     return _pool;
+}
+
+// Pool secundario para BD de enriquecimiento (Wikipedia extracts).
+// Si DATABASE_URL_ENRICHMENT no está definida, devuelve null y el endpoint
+// que la use debe hacer fallback al flujo normal.
+function getEnrichmentPool() {
+    if (_enrichmentPool === null) {
+        const url = process.env.DATABASE_URL_ENRICHMENT;
+        if (!url) {
+            _enrichmentPool = false; // marker para no reintentar
+            return null;
+        }
+        _enrichmentPool = new Pool({
+            connectionString: url.replace(/^'|'$/g, '').replace(/\s+/g, ''),
+            ssl: { rejectUnauthorized: false },
+        });
+    }
+    return _enrichmentPool || null;
+}
+
+async function queryEnrichment(sql, params) {
+    const pool = getEnrichmentPool();
+    if (!pool) return null;
+    try {
+        return await pool.query(pgParams(sql), params);
+    } catch (e) {
+        console.error('[Enrichment DB] query error:', e.message);
+        return null;
+    }
 }
 
 // Convert ? placeholders to $1, $2, ... for pg compatibility
@@ -1746,6 +1776,7 @@ async function cerrar() {
 
 module.exports = {
     query,
+    queryEnrichment,
     transaction,
     inicializarTablas,
     insertarBien,
