@@ -5,7 +5,7 @@ require('dotenv').config();
 types.setTypeParser(20, parseInt);
 
 let _pool = null;
-let _enrichmentPool = null;
+let _enrichmentPools = {}; // { es: Pool, ca: Pool, ... } o false si no configurado
 let _initialized = false;
 
 function getPool() {
@@ -28,31 +28,37 @@ function getPool() {
     return _pool;
 }
 
-// Pool secundario para BD de enriquecimiento (Wikipedia extracts).
-// Si DATABASE_URL_ENRICHMENT no está definida, devuelve null y el endpoint
-// que la use debe hacer fallback al flujo normal.
-function getEnrichmentPool() {
-    if (_enrichmentPool === null) {
-        const url = process.env.DATABASE_URL_ENRICHMENT;
-        if (!url) {
-            _enrichmentPool = false; // marker para no reintentar
-            return null;
-        }
-        _enrichmentPool = new Pool({
-            connectionString: url.replace(/^'|'$/g, '').replace(/\s+/g, ''),
-            ssl: { rejectUnauthorized: false },
-        });
+// Pool secundario para BD de enriquecimiento (Wikipedia extracts), una por idioma.
+// Naming: DATABASE_URL_ENRICHMENT_<LANG_UPPER>. Fallback a DATABASE_URL_ENRICHMENT
+// para 'es' (backward compat con setup inicial).
+function getEnrichmentPool(lang) {
+    const key = (lang || 'es').toLowerCase();
+    if (_enrichmentPools[key] !== undefined) {
+        return _enrichmentPools[key] || null;
     }
-    return _enrichmentPool || null;
+    const envKey = `DATABASE_URL_ENRICHMENT_${key.toUpperCase()}`;
+    let url = process.env[envKey];
+    if (!url && key === 'es') {
+        url = process.env.DATABASE_URL_ENRICHMENT; // backward compat
+    }
+    if (!url) {
+        _enrichmentPools[key] = false;
+        return null;
+    }
+    _enrichmentPools[key] = new Pool({
+        connectionString: url.replace(/^'|'$/g, '').replace(/\s+/g, ''),
+        ssl: { rejectUnauthorized: false },
+    });
+    return _enrichmentPools[key];
 }
 
-async function queryEnrichment(sql, params) {
-    const pool = getEnrichmentPool();
+async function queryEnrichment(lang, sql, params) {
+    const pool = getEnrichmentPool(lang);
     if (!pool) return null;
     try {
         return await pool.query(pgParams(sql), params);
     } catch (e) {
-        console.error('[Enrichment DB] query error:', e.message);
+        console.error(`[Enrichment DB ${lang}] query error:`, e.message);
         return null;
     }
 }

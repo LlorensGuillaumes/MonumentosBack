@@ -3326,27 +3326,55 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         const cachedLang = urlMatch[1];
         const cachedTitle = urlMatch[2];
 
-        // Lookup en BD secundaria de enriquecimiento (full_text rico de Wikipedia)
-        // Si está disponible y el idioma coincide con el cacheado, devolverlo prioritariamente
-        if (requestedLang === cachedLang) {
-            const enrichRes = await db.queryEnrichment(
+        // Lookup en BDs secundarias por idioma. Primero intentamos en el idioma
+        // pedido; si no hay, caemos a ES como universal fallback. Cada BD secundaria
+        // (Neon project independiente) contiene Wikipedia extracts en SU idioma.
+        let enrichRow = null;
+        let enrichLang = null;
+
+        // 1) Primer intento: pool del idioma pedido
+        const tryRes1 = await db.queryEnrichment(
+            requestedLang,
+            'SELECT extract, full_text, lang FROM wikipedia_extracts WHERE bien_id = $1',
+            [id]
+        );
+        if (tryRes1 && tryRes1.rows[0] && tryRes1.rows[0].full_text && tryRes1.rows[0].full_text.length > 200) {
+            enrichRow = tryRes1.rows[0];
+            enrichLang = enrichRow.lang || requestedLang;
+        }
+
+        // 2) Fallback: pool ES si no encontramos en el lang pedido
+        if (!enrichRow && requestedLang !== 'es') {
+            const tryRes2 = await db.queryEnrichment(
+                'es',
                 'SELECT extract, full_text, lang FROM wikipedia_extracts WHERE bien_id = $1',
                 [id]
             );
-            const enrichRow = enrichRes && enrichRes.rows[0];
-            if (enrichRow && enrichRow.full_text && enrichRow.full_text.length > 200) {
-                return res.json({
-                    extract: enrichRow.extract || enrichRow.full_text.slice(0, 1500),
-                    full_text: enrichRow.full_text,
-                    source: 'enrichment',
-                    lang: enrichRow.lang || cachedLang,
-                });
+            if (tryRes2 && tryRes2.rows[0] && tryRes2.rows[0].full_text && tryRes2.rows[0].full_text.length > 200) {
+                enrichRow = tryRes2.rows[0];
+                enrichLang = enrichRow.lang || 'es';
             }
+        }
+
+        // Si la secundaria está en el idioma pedido: respuesta directa
+        if (enrichRow && enrichLang === requestedLang) {
+            return res.json({
+                extract: enrichRow.extract || enrichRow.full_text.slice(0, 1500),
+                full_text: enrichRow.full_text,
+                source: 'enrichment',
+                lang: enrichLang,
+            });
         }
 
         // Cache primario (wikidata.descripcion): solo válido si idioma coincide
         if (requestedLang === cachedLang && row.descripcion && row.descripcion.length > 200) {
-            return res.json({ extract: row.descripcion, source: 'cache', lang: cachedLang });
+            const response = { extract: row.descripcion, source: 'cache', lang: cachedLang };
+            // Si hay enrichment en otro idioma, ofrecerlo como full_text con su lang
+            if (enrichRow) {
+                response.full_text = enrichRow.full_text;
+                response.full_text_lang = enrichLang;
+            }
+            return res.json(response);
         }
 
         // Resolver título en idioma pedido vía Wikidata sitelinks (si el QID existe)
@@ -3378,6 +3406,15 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         );
 
         if (!wikiResponse.ok) {
+            // Si hay enrichment en otro idioma, usarlo como fallback completo
+            if (enrichRow) {
+                return res.json({
+                    extract: enrichRow.extract || enrichRow.full_text.slice(0, 1500),
+                    full_text: enrichRow.full_text,
+                    source: 'enrichment-fallback',
+                    lang: enrichLang,
+                });
+            }
             // Si Wikipedia da 429 o similar y tenemos cache (en cualquier idioma), devolverlo como fallback
             if (row.descripcion && row.descripcion.length > 100) {
                 return res.json({ extract: row.descripcion, source: 'cache-fallback', lang: cachedLang });
@@ -3389,6 +3426,15 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
         const extract = wikiData.extract;
 
         if (!extract) {
+            // Fallback al enrichment si existe
+            if (enrichRow) {
+                return res.json({
+                    extract: enrichRow.extract || enrichRow.full_text.slice(0, 1500),
+                    full_text: enrichRow.full_text,
+                    source: 'enrichment-fallback',
+                    lang: enrichLang,
+                });
+            }
             return res.status(404).json({ error: 'No se encontró extracto en Wikipedia' });
         }
 
@@ -3404,7 +3450,13 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
             }
         }
 
-        res.json({ extract, source: 'wikipedia', lang: targetLang });
+        // Respuesta híbrida: extract en idioma pedido + full_text de enrichment (otro idioma)
+        const response = { extract, source: 'wikipedia', lang: targetLang };
+        if (enrichRow) {
+            response.full_text = enrichRow.full_text;
+            response.full_text_lang = enrichLang;
+        }
+        res.json(response);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
