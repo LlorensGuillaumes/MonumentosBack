@@ -3474,7 +3474,7 @@ app.get('/api/monumentos/:id/wikipedia', async (req, res) => {
  *
  * Query params: pais, region, theme, limit (default 5)
  */
-app.get('/api/admin/social-accounts/suggest', async (req, res) => {
+app.get('/api/admin/social-accounts/suggest', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { pais, region, theme, limit = 5 } = req.query;
         const maxAccounts = Math.min(parseInt(limit) || 5, 10);
@@ -3548,7 +3548,7 @@ app.get('/api/admin/social-accounts/suggest', async (req, res) => {
  * Marca cuentas como "usadas" para el algoritmo de rotación.
  * Body: { account_ids: [1, 2, 3] }
  */
-app.post('/api/admin/social-accounts/mark-used', async (req, res) => {
+app.post('/api/admin/social-accounts/mark-used', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { account_ids } = req.body;
         if (!account_ids || !Array.isArray(account_ids) || account_ids.length === 0) {
@@ -3572,7 +3572,7 @@ app.post('/api/admin/social-accounts/mark-used', async (req, res) => {
  * GET /api/admin/social-accounts
  * Lista todas las cuentas (para gestión en admin).
  */
-app.get('/api/admin/social-accounts', async (req, res) => {
+app.get('/api/admin/social-accounts', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { rows } = await db.query(`
             SELECT * FROM social_accounts
