@@ -88,9 +88,9 @@ app.use((req, res, next) => {
 // Cuando una IP se bloquea, se envía email de alerta (vía Gmail SMTP existente).
 // In-memory: se resetea con redeploy (suficiente para ataques cortos).
 
-const RL_VIOLATIONS_WINDOW_MS = 5 * 60 * 1000;     // 5 min para contar violaciones
-const RL_VIOLATIONS_TO_BLOCK = 3;                  // 3 violaciones consecutivas
-const RL_BLOCK_DURATION_MS = 60 * 60 * 1000;       // bloqueo de 1h
+const RL_VIOLATIONS_WINDOW_MS = 10 * 60 * 1000;    // 10 min para contar violaciones
+const RL_VIOLATIONS_TO_BLOCK = 10;                 // 10 violaciones consecutivas (no 3 — demasiado agresivo)
+const RL_BLOCK_DURATION_MS = 30 * 60 * 1000;       // bloqueo de 30min (no 1h)
 const HIT_ALERT_COOLDOWN_MS = 30 * 60 * 1000;      // 1 email "hit" cada 30min por IP
 const BLOCK_ALERT_COOLDOWN_MS = 60 * 60 * 1000;    // 1 email "block" cada 1h por IP
 
@@ -194,10 +194,10 @@ function makeRateLimitHandler(endpointLabel) {
     };
 }
 
-// Rate limiting — general: 60 req/min per IP (antes 100)
+// Rate limiting — general: 150 req/min per IP (frontend SPA hace muchos requests por navegación)
 const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60,
+    max: 150,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('general'),
@@ -205,10 +205,10 @@ const generalLimiter = rateLimit({
 });
 app.use('/api', generalLimiter);
 
-// Rate limiting — bulk data endpoints: 20 req/min per IP (antes 30)
+// Rate limiting — bulk data endpoints: 60 req/min per IP (map + search + filtros disparan en bursts)
 const dataLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 20,
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('data'),
@@ -219,10 +219,10 @@ app.use('/api/geojson', dataLimiter);
 app.use('/api/ccaa-resumen', dataLimiter);
 app.use('/api/municipios', dataLimiter);
 
-// Rate limiting — auth endpoints: 5 req/min per IP (antes 10)
+// Rate limiting — auth endpoints: 10 req/min per IP (5 era agresivo, usuario con typo bloquea)
 const authLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 5,
+    max: 10,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('auth'),
