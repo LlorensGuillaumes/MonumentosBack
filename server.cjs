@@ -83,22 +83,116 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rate limiting — general: 100 req/min per IP
+// ============== IP BLOCKING + RATE LIMIT ALERTS ==============
+// IPs que violan rate limits N veces consecutivas se bloquean temporalmente.
+// Cuando una IP se bloquea, se envía email de alerta (vía Gmail SMTP existente).
+// In-memory: se resetea con redeploy (suficiente para ataques cortos).
+
+const RL_VIOLATIONS_WINDOW_MS = 5 * 60 * 1000;     // 5 min para contar violaciones
+const RL_VIOLATIONS_TO_BLOCK = 3;                  // 3 violaciones consecutivas
+const RL_BLOCK_DURATION_MS = 60 * 60 * 1000;       // bloqueo de 1h
+const ALERT_COOLDOWN_MS = 60 * 60 * 1000;          // 1 email/hora por IP
+
+const ipViolations = new Map(); // ip → { count, firstViolation, blockedUntil, lastAlertSent }
+
+function getClientIp(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0].trim()
+        || req.headers['x-real-ip']
+        || req.socket?.remoteAddress
+        || 'unknown';
+}
+
+async function sendSecurityAlert(ip, reason, details = {}) {
+    const recipient = process.env.SECURITY_ALERT_EMAIL || process.env.GMAIL_USER;
+    if (!recipient || !process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+        console.log(`[SECURITY] Alert skipped (no GMAIL config): ${reason} IP=${ip}`);
+        return;
+    }
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+            connectionTimeout: 10000,
+            socketTimeout: 15000,
+        });
+        await transporter.sendMail({
+            from: `"Patrimonio Europeo - Security" <${process.env.GMAIL_USER}>`,
+            to: recipient,
+            subject: `🚨 Security alert: ${reason}`,
+            text: `Una IP ha sido bloqueada en el backend de Patrimonio Europeo.\n\n` +
+                  `IP: ${ip}\n` +
+                  `Razón: ${reason}\n` +
+                  `Hora: ${new Date().toISOString()}\n` +
+                  `Detalles: ${JSON.stringify(details, null, 2)}\n\n` +
+                  `La IP estará bloqueada durante ${RL_BLOCK_DURATION_MS / 60000} minutos.\n` +
+                  `Si crees que es un falso positivo, reinicia el backend para limpiar el bloqueo (in-memory).`,
+        });
+        console.log(`[SECURITY] Alert email sent to ${recipient} for IP=${ip}`);
+    } catch (e) {
+        console.error(`[SECURITY] Failed to send alert email: ${e.message}`);
+    }
+}
+
+function recordViolation(ip, endpoint) {
+    const now = Date.now();
+    let v = ipViolations.get(ip);
+    if (!v || now - v.firstViolation > RL_VIOLATIONS_WINDOW_MS) {
+        v = { count: 0, firstViolation: now, blockedUntil: null, lastAlertSent: 0 };
+    }
+    v.count++;
+    ipViolations.set(ip, v);
+    console.log(`[SECURITY] Rate limit hit: IP=${ip} endpoint=${endpoint} count=${v.count}/${RL_VIOLATIONS_TO_BLOCK}`);
+
+    if (v.count >= RL_VIOLATIONS_TO_BLOCK && !v.blockedUntil) {
+        v.blockedUntil = now + RL_BLOCK_DURATION_MS;
+        ipViolations.set(ip, v);
+        console.log(`[SECURITY] 🚫 IP BLOCKED: ${ip} until ${new Date(v.blockedUntil).toISOString()}`);
+        if (now - v.lastAlertSent > ALERT_COOLDOWN_MS) {
+            v.lastAlertSent = now;
+            sendSecurityAlert(ip, 'IP blocked after rate limit violations', { endpoint, violations: v.count });
+        }
+    }
+}
+
+// Middleware GLOBAL que comprueba bloqueo antes de cualquier route
+app.use((req, res, next) => {
+    const ip = getClientIp(req);
+    const v = ipViolations.get(ip);
+    if (v && v.blockedUntil && Date.now() < v.blockedUntil) {
+        return res.status(429).json({
+            error: 'IP temporally blocked due to suspicious activity',
+            retry_after_ms: v.blockedUntil - Date.now(),
+        });
+    }
+    next();
+});
+
+// Handler común para rate limiters: registra violación + bloqueo automático
+function makeRateLimitHandler(endpointLabel) {
+    return (req, res, next, options) => {
+        recordViolation(getClientIp(req), endpointLabel);
+        res.status(options.statusCode).json(options.message);
+    };
+}
+
+// Rate limiting — general: 60 req/min per IP (antes 100)
 const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 100,
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: makeRateLimitHandler('general'),
     message: { error: 'Too many requests. Try again in a minute.' },
 });
 app.use('/api', generalLimiter);
 
-// Rate limiting — bulk data endpoints: 30 req/min per IP
+// Rate limiting — bulk data endpoints: 20 req/min per IP (antes 30)
 const dataLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 30,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: makeRateLimitHandler('data'),
     message: { error: 'Too many data requests. Try again in a minute.' },
 });
 app.use('/api/monumentos', dataLimiter);
@@ -106,12 +200,13 @@ app.use('/api/geojson', dataLimiter);
 app.use('/api/ccaa-resumen', dataLimiter);
 app.use('/api/municipios', dataLimiter);
 
-// Rate limiting — auth endpoints: 10 req/min per IP
+// Rate limiting — auth endpoints: 5 req/min per IP (antes 10)
 const authLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
+    max: 5,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: makeRateLimitHandler('auth'),
     message: { error: 'Too many auth attempts. Try again in a minute.' },
 });
 app.use('/api/auth/login', authLimiter);
