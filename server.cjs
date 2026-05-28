@@ -91,9 +91,10 @@ app.use((req, res, next) => {
 const RL_VIOLATIONS_WINDOW_MS = 5 * 60 * 1000;     // 5 min para contar violaciones
 const RL_VIOLATIONS_TO_BLOCK = 3;                  // 3 violaciones consecutivas
 const RL_BLOCK_DURATION_MS = 60 * 60 * 1000;       // bloqueo de 1h
-const ALERT_COOLDOWN_MS = 60 * 60 * 1000;          // 1 email/hora por IP
+const HIT_ALERT_COOLDOWN_MS = 30 * 60 * 1000;      // 1 email "hit" cada 30min por IP
+const BLOCK_ALERT_COOLDOWN_MS = 60 * 60 * 1000;    // 1 email "block" cada 1h por IP
 
-const ipViolations = new Map(); // ip → { count, firstViolation, blockedUntil, lastAlertSent }
+const ipViolations = new Map(); // ip → { count, firstViolation, blockedUntil, lastHitAlertSent, lastBlockAlertSent }
 
 function getClientIp(req) {
     return req.headers['x-forwarded-for']?.split(',')[0].trim()
@@ -137,19 +138,37 @@ function recordViolation(ip, endpoint) {
     const now = Date.now();
     let v = ipViolations.get(ip);
     if (!v || now - v.firstViolation > RL_VIOLATIONS_WINDOW_MS) {
-        v = { count: 0, firstViolation: now, blockedUntil: null, lastAlertSent: 0 };
+        v = { count: 0, firstViolation: now, blockedUntil: null, lastHitAlertSent: 0, lastBlockAlertSent: 0 };
     }
     v.count++;
     ipViolations.set(ip, v);
     console.log(`[SECURITY] Rate limit hit: IP=${ip} endpoint=${endpoint} count=${v.count}/${RL_VIOLATIONS_TO_BLOCK}`);
 
+    // Alerta en cada violación (con cooldown 30min/IP). En uso normal NADIE debería
+    // superar rate limit, por lo que cualquier violación es señal a investigar.
+    if (now - v.lastHitAlertSent > HIT_ALERT_COOLDOWN_MS) {
+        v.lastHitAlertSent = now;
+        ipViolations.set(ip, v);
+        sendSecurityAlert(ip, `Rate limit superado (${endpoint})`, {
+            endpoint,
+            violations_in_window: v.count,
+            window_minutes: RL_VIOLATIONS_WINDOW_MS / 60000,
+            will_block_at: RL_VIOLATIONS_TO_BLOCK,
+        });
+    }
+
     if (v.count >= RL_VIOLATIONS_TO_BLOCK && !v.blockedUntil) {
         v.blockedUntil = now + RL_BLOCK_DURATION_MS;
         ipViolations.set(ip, v);
         console.log(`[SECURITY] 🚫 IP BLOCKED: ${ip} until ${new Date(v.blockedUntil).toISOString()}`);
-        if (now - v.lastAlertSent > ALERT_COOLDOWN_MS) {
-            v.lastAlertSent = now;
-            sendSecurityAlert(ip, 'IP blocked after rate limit violations', { endpoint, violations: v.count });
+        if (now - v.lastBlockAlertSent > BLOCK_ALERT_COOLDOWN_MS) {
+            v.lastBlockAlertSent = now;
+            sendSecurityAlert(ip, '🚫 IP BLOQUEADA tras violaciones repetidas', {
+                endpoint,
+                violations: v.count,
+                blocked_until: new Date(v.blockedUntil).toISOString(),
+                block_duration_minutes: RL_BLOCK_DURATION_MS / 60000,
+            });
         }
     }
 }
