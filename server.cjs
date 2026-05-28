@@ -1340,6 +1340,23 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.sin_imagen === 'true') {
             where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
+        // Oleada B — propiedades Wikidata estructuradas (ILIKE %value% para match en valores concatenados con " | ")
+        if (req.query.propietario) {
+            where.push(`w.propietario ILIKE $${pi++}`);
+            params.push(`%${req.query.propietario}%`);
+        }
+        if (req.query.religion) {
+            where.push(`w.religion ILIKE $${pi++}`);
+            params.push(`%${req.query.religion}%`);
+        }
+        if (req.query.dedicado_a) {
+            where.push(`w.dedicado_a ILIKE $${pi++}`);
+            params.push(`%${req.query.dedicado_a}%`);
+        }
+        if (req.query.parte_de) {
+            where.push(`w.parte_de ILIKE $${pi++}`);
+            params.push(`%${req.query.parte_de}%`);
+        }
         if (req.query.heritage_world) {
             const hw = req.query.heritage_world;
             if (hw === 'any') {
@@ -1631,6 +1648,23 @@ app.get('/api/geojson', async (req, res) => {
         if (req.query.sin_imagen === 'true') {
             where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
+        // Oleada B — propiedades Wikidata estructuradas
+        if (req.query.propietario) {
+            where.push(`w.propietario ILIKE $${pi++}`);
+            params.push(`%${req.query.propietario}%`);
+        }
+        if (req.query.religion) {
+            where.push(`w.religion ILIKE $${pi++}`);
+            params.push(`%${req.query.religion}%`);
+        }
+        if (req.query.dedicado_a) {
+            where.push(`w.dedicado_a ILIKE $${pi++}`);
+            params.push(`%${req.query.dedicado_a}%`);
+        }
+        if (req.query.parte_de) {
+            where.push(`w.parte_de ILIKE $${pi++}`);
+            params.push(`%${req.query.parte_de}%`);
+        }
         if (req.query.bbox) {
             const [minLon, minLat, maxLon, maxLat] = req.query.bbox.split(',').map(parseFloat);
             if (!isNaN(minLon) && !isNaN(minLat) && !isNaN(maxLon) && !isNaN(maxLat)) {
@@ -1866,6 +1900,45 @@ app.get('/api/filtros', async (req, res) => {
             row.label = PADRE_LABELS[row.value] || row.value;
         }
 
+        // Oleada B — distinct values de propiedades Wikidata estructuradas
+        // Usamos unnest(string_to_array(..., '|')) para extraer valores individuales
+        // (las columnas almacenan múltiples valores separados por " | ")
+        const propietariosR = await db.query(`
+            SELECT TRIM(unnest(string_to_array(w.propietario, '|'))) as value, COUNT(*) as count
+            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+            WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${whereClause}
+            GROUP BY value
+            HAVING TRIM(unnest(string_to_array(w.propietario, '|'))) != ''
+            ORDER BY count DESC LIMIT 100
+        `, whereParams).catch(() => ({ rows: [] }));
+
+        const religionesR = await db.query(`
+            SELECT TRIM(unnest(string_to_array(w.religion, '|'))) as value, COUNT(*) as count
+            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+            WHERE w.religion IS NOT NULL AND w.religion != '' AND ${whereClause}
+            GROUP BY value
+            HAVING TRIM(unnest(string_to_array(w.religion, '|'))) != ''
+            ORDER BY count DESC LIMIT 50
+        `, whereParams).catch(() => ({ rows: [] }));
+
+        const dedicacionesR = await db.query(`
+            SELECT TRIM(unnest(string_to_array(w.dedicado_a, '|'))) as value, COUNT(*) as count
+            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+            WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${whereClause}
+            GROUP BY value
+            HAVING TRIM(unnest(string_to_array(w.dedicado_a, '|'))) != ''
+            ORDER BY count DESC LIMIT 100
+        `, whereParams).catch(() => ({ rows: [] }));
+
+        const partesDeR = await db.query(`
+            SELECT TRIM(unnest(string_to_array(w.parte_de, '|'))) as value, COUNT(*) as count
+            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+            WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${whereClause}
+            GROUP BY value
+            HAVING TRIM(unnest(string_to_array(w.parte_de, '|'))) != ''
+            ORDER BY count DESC LIMIT 200
+        `, whereParams).catch(() => ({ rows: [] }));
+
         res.json({
             paises: paisesR.rows,
             regiones: regionesR.rows,
@@ -1876,6 +1949,10 @@ app.get('/api/filtros', async (req, res) => {
             periodos: periodosR.rows,
             eventos: eventosR.rows,
             eventos_padres: eventosPadresR.rows,
+            propietarios: propietariosR.rows,
+            religiones: religionesR.rows,
+            dedicaciones: dedicacionesR.rows,
+            partes_de: partesDeR.rows,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
