@@ -598,7 +598,7 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(409).json({ error: 'Ya existe un usuario con este email' });
         }
 
-        const password_hash = bcrypt.hashSync(password, 10);
+        const password_hash = bcrypt.hashSync(password, 12);
         const result = await db.crearUsuario({
             email,
             password_hash,
@@ -763,7 +763,7 @@ app.put('/api/auth/me/password', authMiddleware, async (req, res) => {
             return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
         }
 
-        const new_hash = bcrypt.hashSync(new_password, 10);
+        const new_hash = bcrypt.hashSync(new_password, 12);
         await db.actualizarUsuario(usuario.id, { password_hash: new_hash });
 
         res.json({ ok: true, message: 'Contraseña actualizada correctamente' });
@@ -2472,11 +2472,13 @@ app.post('/api/email/send', upload.array('archivos', 10), async (req, res) => {
                         attachments,
                     });
                     emailJob.sent++;
-                    console.log(`[Email ${i + 1}/${contactos.length}] OK -> ${email} (${c.municipio})${attachments.length ? ` [${attachments.length} adjunto${attachments.length !== 1 ? 's' : ''}]` : ''}`);
+                    const maskEmail = (e) => e ? e.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2') : 'unknown';
+                    console.log(`[Email ${i + 1}/${contactos.length}] OK -> ${maskEmail(email)} (${c.municipio})${attachments.length ? ` [${attachments.length} adjunto${attachments.length !== 1 ? 's' : ''}]` : ''}`);
                 } catch (err) {
                     emailJob.failed++;
                     emailJob.errors.push({ municipio: c.municipio, email, error: err.message });
-                    console.error(`[Email ${i + 1}/${contactos.length}] ERROR -> ${email}: ${err.message}`);
+                    const maskEmail = (e) => e ? e.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2') : 'unknown';
+                    console.error(`[Email ${i + 1}/${contactos.length}] ERROR -> ${maskEmail(email)}: ${err.message}`);
                 }
 
                 // Delay entre emails
@@ -2545,7 +2547,8 @@ app.post('/api/contact', upload.array('archivos', 5), async (req, res) => {
             );
         }
 
-        console.log(`[Contact] Mensaje guardado de ${email}: "${asunto}" (${(req.files || []).length} adjuntos)`);
+        const maskEmail = (e) => e ? e.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2') : 'unknown';
+        console.log(`[Contact] Mensaje guardado de ${maskEmail(email)}: "${asunto.slice(0, 40)}..." (${(req.files || []).length} adjuntos)`);
         res.json({ ok: true });
     } catch (err) {
         console.error('[Contact] Error:', err.message);
