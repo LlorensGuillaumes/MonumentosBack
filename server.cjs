@@ -493,6 +493,26 @@ const RELIGION_MACRO_MAP = (() => {
     return m;
 })();
 
+// Mapa inverso: categoría macro → array de labels raw originales
+const RELIGION_MACRO_TO_RAW = (() => {
+    const inv = new Map();
+    for (const [raw, macro] of RELIGION_MACRO_MAP.entries()) {
+        if (!inv.has(macro)) inv.set(macro, []);
+        inv.get(macro).push(raw);
+    }
+    return inv;
+})();
+
+// Dado un valor de filtro (puede ser una macro como "Catolicismo" o un valor raw),
+// devuelve el array de labels raw a buscar en BD
+function expandirReligionParaFiltro(filtroValor) {
+    if (!filtroValor) return [];
+    const variantes = RELIGION_MACRO_TO_RAW.get(filtroValor);
+    if (variantes && variantes.length > 0) return variantes;
+    // No es macro → buscar el valor tal cual (case-insensitive vs BD)
+    return [filtroValor.toLowerCase().trim()];
+}
+
 function normalizarReligiones(rawRows) {
     const agrupados = {};
     for (const row of rawRows) {
@@ -1394,8 +1414,11 @@ app.get('/api/monumentos', async (req, res) => {
             params.push(`%${req.query.propietario}%`);
         }
         if (req.query.religion) {
-            where.push(`w.religion ILIKE $${pi++}`);
-            params.push(`%${req.query.religion}%`);
+            // Si es macro (Catolicismo, etc.) expandir a variantes raw; sino usar tal cual
+            const variantes = expandirReligionParaFiltro(req.query.religion);
+            const orParts = variantes.map(() => `w.religion ILIKE $${pi++}`);
+            where.push(`(${orParts.join(' OR ')})`);
+            for (const v of variantes) params.push(`%${v}%`);
         }
         if (req.query.dedicado_a) {
             where.push(`w.dedicado_a ILIKE $${pi++}`);
@@ -1723,8 +1746,11 @@ app.get('/api/geojson', async (req, res) => {
             params.push(`%${req.query.propietario}%`);
         }
         if (req.query.religion) {
-            where.push(`w.religion ILIKE $${pi++}`);
-            params.push(`%${req.query.religion}%`);
+            // Si es macro (Catolicismo, etc.) expandir a variantes raw; sino usar tal cual
+            const variantes = expandirReligionParaFiltro(req.query.religion);
+            const orParts = variantes.map(() => `w.religion ILIKE $${pi++}`);
+            where.push(`(${orParts.join(' OR ')})`);
+            for (const v of variantes) params.push(`%${v}%`);
         }
         if (req.query.dedicado_a) {
             where.push(`w.dedicado_a ILIKE $${pi++}`);
@@ -1846,25 +1872,34 @@ app.get('/api/filtros', async (req, res) => {
             const parts = [];
             const params = [...whereParams];
             let p = whereParams.length + 1;
+
+            // Helper genérico para construir cláusula multivalor con OR de LIKEs
+            // Para religion: expandimos macro a variantes raw
+            const buildMultiValueClause = (col, valor, expandir = null) => {
+                const valores = expandir ? expandir(valor) : [valor];
+                const orParts = [];
+                for (const v of valores) {
+                    orParts.push(
+                        `LOWER(${col}) = $${p} OR LOWER(${col}) LIKE $${p + 1} OR LOWER(${col}) LIKE $${p + 2} OR LOWER(${col}) LIKE $${p + 3}`
+                    );
+                    const low = v.toLowerCase();
+                    params.push(low, `${low}|%`, `%|${low}|%`, `%|${low}`);
+                    p += 4;
+                }
+                return `(${orParts.join(' OR ')})`;
+            };
+
             if (religionActiva && excludeField !== 'religion') {
-                parts.push(`(w.religion = $${p} OR w.religion LIKE $${p + 1} OR w.religion LIKE $${p + 2} OR w.religion LIKE $${p + 3})`);
-                params.push(religionActiva, `${religionActiva}|%`, `%|${religionActiva}|%`, `%|${religionActiva}`);
-                p += 4;
+                parts.push(buildMultiValueClause('w.religion', religionActiva, expandirReligionParaFiltro));
             }
             if (dedicadoActivo && excludeField !== 'dedicado_a') {
-                parts.push(`(w.dedicado_a = $${p} OR w.dedicado_a LIKE $${p + 1} OR w.dedicado_a LIKE $${p + 2} OR w.dedicado_a LIKE $${p + 3})`);
-                params.push(dedicadoActivo, `${dedicadoActivo}|%`, `%|${dedicadoActivo}|%`, `%|${dedicadoActivo}`);
-                p += 4;
+                parts.push(buildMultiValueClause('w.dedicado_a', dedicadoActivo));
             }
             if (parteActiva && excludeField !== 'parte_de') {
-                parts.push(`(w.parte_de = $${p} OR w.parte_de LIKE $${p + 1} OR w.parte_de LIKE $${p + 2} OR w.parte_de LIKE $${p + 3})`);
-                params.push(parteActiva, `${parteActiva}|%`, `%|${parteActiva}|%`, `%|${parteActiva}`);
-                p += 4;
+                parts.push(buildMultiValueClause('w.parte_de', parteActiva));
             }
             if (propActivo && excludeField !== 'propietario') {
-                parts.push(`(w.propietario = $${p} OR w.propietario LIKE $${p + 1} OR w.propietario LIKE $${p + 2} OR w.propietario LIKE $${p + 3})`);
-                params.push(propActivo, `${propActivo}|%`, `%|${propActivo}|%`, `%|${propActivo}`);
-                p += 4;
+                parts.push(buildMultiValueClause('w.propietario', propActivo));
             }
             return {
                 where: parts.length > 0 ? whereClause + ' AND ' + parts.join(' AND ') : whereClause,
