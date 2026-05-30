@@ -237,12 +237,12 @@ app.use(express.json());
 // ============== CLASIFICACION DE MONUMENTOS ==============
 
 const CLASIFICACION_GRUPOS = {
-    religiosa: ['Iglesia / Ermita', 'Catedral', 'Monasterio / Convento', 'Arte religioso', 'Mezquita / Sinagoga', 'Cruz / Crucero'],
+    religiosa: ['Iglesia / Ermita', 'Catedral', 'Monasterio / Convento', 'Arte religioso', 'Mezquita / Sinagoga', 'Cruz / Crucero', 'Cementerio'],
     militar: ['Castillo / Fortaleza', 'Torre', 'Muralla'],
-    civil: ['Edificio civil', 'Palacio', 'Casa señorial / Mansión', 'Teatro', 'Museo', 'Monumento conmemorativo'],
+    civil: ['Edificio civil', 'Edificio histórico', 'Conjunto arquitectónico', 'Elemento arquitectónico', 'Palacio', 'Casa señorial / Mansión', 'Teatro', 'Museo', 'Monumento conmemorativo', 'Monumento'],
     arqueologica: ['Yacimiento arqueológico', 'Megalítico'],
-    etnologica: ['Arquitectura rural', 'Molino', 'Patrimonio industrial'],
-    infraestructura: ['Puente', 'Acueducto', 'Fuente', 'Faro', 'Obra hidráulica', 'Plaza de toros', 'Cementerio', 'Balneario / Termas'],
+    etnologica: ['Arquitectura rural', 'Molino', 'Patrimonio etnográfico'],
+    infraestructura: ['Puente', 'Acueducto', 'Fuente', 'Faro', 'Obra hidráulica', 'Plaza de toros', 'Balneario / Termas', 'Patrimonio industrial'],
 };
 
 const ALL_CLASSIFIED_TIPOS = Object.values(CLASIFICACION_GRUPOS).flat();
