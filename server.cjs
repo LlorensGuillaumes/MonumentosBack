@@ -458,6 +458,54 @@ const ESTILO_EXCLUIR = new Set([
     'tejado a cuatro aguas', 'tejado a dos aguas', 'ingles',
 ]);
 
+// Normalización de religiones a categorías macro
+// Mapa: cualquier label raw (lowercased y trim) → categoría
+const RELIGION_MACRO_MAP = (() => {
+    const m = new Map();
+    const add = (cat, ...labels) => labels.forEach(l => m.set(l.toLowerCase().trim(), cat));
+    add('Catolicismo',
+        'catolicismo', 'iglesia católica', 'católico latino', 'católico', 'iglesia latina',
+        'catolicismo tradicionalista', 'iglesia católica en francia', 'rito romano',
+        'rito ambrosiano', 'catolicismo n° 140, agosto de 1962',
+        'orden de san agustín', 'orden de la inmaculada concepción', 'orden del císter',
+        'iglesia católica armenia');
+    add('Cristianismo ortodoxo',
+        'cristianismo ortodoxo', 'iglesia ortodoxa', 'iglesia ortodoxa rumana',
+        'iglesia ortodoxa rusa', 'iglesia ortodoxa copta', 'iglesia apostólica armenia',
+        'iglesia greco-católica ucraniana', 'iglesia greco-católica melquita',
+        'rito bizantino');
+    add('Protestantismo',
+        'protestantismo', 'luteranismo', 'anglicanismo', 'calvinismo', 'presbiterianismo',
+        'iglesia de inglaterra', 'iglesia episcopal en los estados unidos',
+        'iglesia protestante unida de francia', 'iglesia española reformada episcopal',
+        'iglesia evangélica española', 'la iglesia de jesucristo de los santos de los últimos días',
+        'protestant church of augsburg confession of alsace and lorraine',
+        'evangelical lutheran church – synod of france and belgium',
+        'església reformada suissa');
+    add('Cristianismo', 'cristianismo', 'cristianismo primitivo');
+    add('Judaísmo', 'judaísmo');
+    add('Islam', 'islam');
+    add('Hinduismo', 'hinduismo');
+    add('Budismo', 'budismo', 'budismo tibetano');
+    add('Sijismo', 'sijismo', 'sijismo en españa');
+    add('Bahaísmo', 'bahaísmo');
+    add('Religiones antiguas', 'mitraísmo', 'politeismo celta', 'religión de la antigua roma');
+    return m;
+})();
+
+function normalizarReligiones(rawRows) {
+    const agrupados = {};
+    for (const row of rawRows) {
+        const key = (row.value || '').toLowerCase().trim();
+        const macro = RELIGION_MACRO_MAP.get(key) || (row.value.charAt(0).toUpperCase() + row.value.slice(1));
+        if (!agrupados[macro]) agrupados[macro] = 0;
+        agrupados[macro] += parseInt(row.count, 10) || 0;
+    }
+    return Object.entries(agrupados)
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => b.count - a.count);
+}
+
 function normalizarEstilos(rawRows) {
     const agrupados = {};
     for (const row of rawRows) {
@@ -1768,8 +1816,13 @@ app.get('/api/geojson', async (req, res) => {
 app.get('/api/filtros', async (req, res) => {
     try {
         const { pais, region, provincia } = req.query;
+        // Oleada B filtros activos (para cascada)
+        const religionActiva = req.query.religion;
+        const dedicadoActivo = req.query.dedicado_a;
+        const parteActiva = req.query.parte_de;
+        const propActivo = req.query.propietario;
 
-        // Build WHERE for filtered queries
+        // Build WHERE base (geográfico)
         let whereParams = [];
         let whereParts = [];
         let pi = 1;
@@ -1786,6 +1839,38 @@ app.get('/api/filtros', async (req, res) => {
             whereParams.push(provincia);
         }
         const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1';
+
+        // Helper para añadir cascada Oleada B excluyendo una de las 4 props
+        // Devuelve { where, params } construidos sobre el wikidata `w`
+        function buildOleadaBCascade(excludeField) {
+            const parts = [];
+            const params = [...whereParams];
+            let p = whereParams.length + 1;
+            if (religionActiva && excludeField !== 'religion') {
+                parts.push(`(w.religion = $${p} OR w.religion LIKE $${p + 1} OR w.religion LIKE $${p + 2} OR w.religion LIKE $${p + 3})`);
+                params.push(religionActiva, `${religionActiva}|%`, `%|${religionActiva}|%`, `%|${religionActiva}`);
+                p += 4;
+            }
+            if (dedicadoActivo && excludeField !== 'dedicado_a') {
+                parts.push(`(w.dedicado_a = $${p} OR w.dedicado_a LIKE $${p + 1} OR w.dedicado_a LIKE $${p + 2} OR w.dedicado_a LIKE $${p + 3})`);
+                params.push(dedicadoActivo, `${dedicadoActivo}|%`, `%|${dedicadoActivo}|%`, `%|${dedicadoActivo}`);
+                p += 4;
+            }
+            if (parteActiva && excludeField !== 'parte_de') {
+                parts.push(`(w.parte_de = $${p} OR w.parte_de LIKE $${p + 1} OR w.parte_de LIKE $${p + 2} OR w.parte_de LIKE $${p + 3})`);
+                params.push(parteActiva, `${parteActiva}|%`, `%|${parteActiva}|%`, `%|${parteActiva}`);
+                p += 4;
+            }
+            if (propActivo && excludeField !== 'propietario') {
+                parts.push(`(w.propietario = $${p} OR w.propietario LIKE $${p + 1} OR w.propietario LIKE $${p + 2} OR w.propietario LIKE $${p + 3})`);
+                params.push(propActivo, `${propActivo}|%`, `%|${propActivo}|%`, `%|${propActivo}`);
+                p += 4;
+            }
+            return {
+                where: parts.length > 0 ? whereClause + ' AND ' + parts.join(' AND ') : whereClause,
+                params,
+            };
+        }
 
         // Países disponibles
         const paisesR = await db.query(`
@@ -1924,49 +2009,63 @@ app.get('/api/filtros', async (req, res) => {
         // Oleada B — distinct values de propiedades Wikidata estructuradas
         // Usamos unnest(string_to_array(..., '|')) para extraer valores individuales
         // (las columnas almacenan múltiples valores separados por " | ")
+        // Cascada Oleada B: cada filtro se calcula excluyendo su propio valor activo
+        const cascProp = buildOleadaBCascade('propietario');
         const propietariosR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.propietario, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${whereClause}
+              WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${cascProp.where}
             ) sub
-            WHERE value <> ''
+            WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
             ORDER BY count DESC LIMIT 100
-        `, whereParams).catch(() => ({ rows: [] }));
+        `, cascProp.params).catch(() => ({ rows: [] }));
 
-        const religionesR = await db.query(`
+        const cascRel = buildOleadaBCascade('religion');
+        const religionesRawR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.religion, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.religion IS NOT NULL AND w.religion != '' AND ${whereClause}
+              WHERE w.religion IS NOT NULL AND w.religion != '' AND ${cascRel.where}
             ) sub
-            WHERE value <> ''
+            WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
-            ORDER BY count DESC LIMIT 50
-        `, whereParams).catch(() => ({ rows: [] }));
+            ORDER BY count DESC
+        `, cascRel.params).catch(() => ({ rows: [] }));
 
+        // Normalizar religiones a categorías macro
+        const religionesR = { rows: normalizarReligiones(religionesRawR.rows) };
+
+        const cascDed = buildOleadaBCascade('dedicado_a');
         const dedicacionesR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.dedicado_a, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${whereClause}
+              WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${cascDed.where}
             ) sub
-            WHERE value <> ''
+            WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
             ORDER BY count DESC LIMIT 100
-        `, whereParams).catch(() => ({ rows: [] }));
+        `, cascDed.params).catch(() => ({ rows: [] }));
 
+        const cascParte = buildOleadaBCascade('parte_de');
         const partesDeR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.parte_de, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${whereClause}
+              WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${cascParte.where}
             ) sub
-            WHERE value <> ''
+            WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
             ORDER BY count DESC LIMIT 200
-        `, whereParams).catch(() => ({ rows: [] }));
+        `, cascParte.params).catch(() => ({ rows: [] }));
+
+        // Capitalizar primera letra para UI consistente (Pedro, Abadía de Cluny, etc.)
+        const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+        for (const arr of [propietariosR.rows, dedicacionesR.rows, partesDeR.rows]) {
+            for (const row of arr) row.value = capitalize(row.value);
+        }
 
         res.json({
             paises: paisesR.rows,
