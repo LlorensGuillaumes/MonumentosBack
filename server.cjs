@@ -1928,7 +1928,7 @@ app.get('/api/filtros', async (req, res) => {
             SELECT b.tipo_monumento as value, COUNT(*) as count
             FROM bienes b
             WHERE b.tipo_monumento IS NOT NULL AND ${whereClause}
-            GROUP BY b.tipo_monumento ORDER BY count DESC
+            GROUP BY b.tipo_monumento ORDER BY LOWER(b.tipo_monumento)
         `, whereParams);
 
         // Periodos filtrados
@@ -1936,7 +1936,7 @@ app.get('/api/filtros', async (req, res) => {
             SELECT b.periodo as value, COUNT(*) as count
             FROM bienes b
             WHERE b.periodo IS NOT NULL AND ${whereClause}
-            GROUP BY b.periodo ORDER BY count DESC
+            GROUP BY b.periodo ORDER BY LOWER(b.periodo)
         `, whereParams);
 
         // Municipios filtrados (solo si hay al menos un filtro geográfico para evitar queries masivas)
@@ -1970,7 +1970,8 @@ app.get('/api/filtros', async (req, res) => {
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
             WHERE ${eventosWhere}
-            GROUP BY em.qid_evento, em.qid_evento_padre ORDER BY count DESC
+            GROUP BY em.qid_evento, em.qid_evento_padre
+            ORDER BY LOWER(MIN(em.evento))
         `, eventosParams);
 
         // Categorías padre con su contador agregado
@@ -1980,7 +1981,7 @@ app.get('/api/filtros', async (req, res) => {
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
             WHERE em.qid_evento_padre IS NOT NULL AND ${whereClause}
-            GROUP BY em.qid_evento_padre ORDER BY count DESC
+            GROUP BY em.qid_evento_padre
         `, whereParams);
 
         // Hardcoded labels para las categorías padre (fallback si i18n no traduce)
@@ -2005,11 +2006,13 @@ app.get('/api/filtros', async (req, res) => {
         for (const row of eventosPadresR.rows) {
             row.label = PADRE_LABELS[row.value] || row.value;
         }
+        eventosPadresR.rows.sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
 
         // Oleada B — distinct values de propiedades Wikidata estructuradas
         // Usamos unnest(string_to_array(..., '|')) para extraer valores individuales
         // (las columnas almacenan múltiples valores separados por " | ")
         // Cascada Oleada B: cada filtro se calcula excluyendo su propio valor activo
+        // Tomamos TOP 100/200 por count primero (más relevantes) y luego reordenamos alfabético en JS
         const cascProp = buildOleadaBCascade('propietario');
         const propietariosR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
@@ -2031,7 +2034,6 @@ app.get('/api/filtros', async (req, res) => {
             ) sub
             WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
-            ORDER BY count DESC
         `, cascRel.params).catch(() => ({ rows: [] }));
 
         // Normalizar religiones a categorías macro
@@ -2061,11 +2063,14 @@ app.get('/api/filtros', async (req, res) => {
             ORDER BY count DESC LIMIT 200
         `, cascParte.params).catch(() => ({ rows: [] }));
 
-        // Capitalizar primera letra para UI consistente (Pedro, Abadía de Cluny, etc.)
+        // Capitalizar primera letra + reordenar alfabético (post-capitalize) en JS
         const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+        const alphaSort = (a, b) => a.value.localeCompare(b.value, 'es', { sensitivity: 'base' });
         for (const arr of [propietariosR.rows, dedicacionesR.rows, partesDeR.rows]) {
             for (const row of arr) row.value = capitalize(row.value);
+            arr.sort(alphaSort);
         }
+        religionesR.rows.sort(alphaSort);
 
         res.json({
             paises: paisesR.rows,
