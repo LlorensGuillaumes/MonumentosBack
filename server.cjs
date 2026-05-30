@@ -1925,38 +1925,46 @@ app.get('/api/filtros', async (req, res) => {
         // Usamos unnest(string_to_array(..., '|')) para extraer valores individuales
         // (las columnas almacenan múltiples valores separados por " | ")
         const propietariosR = await db.query(`
-            SELECT TRIM(unnest(string_to_array(w.propietario, '|'))) as value, COUNT(*) as count
-            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-            WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${whereClause}
+            SELECT value, COUNT(*) as count FROM (
+              SELECT TRIM(unnest(string_to_array(w.propietario, '|'))) as value
+              FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+              WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${whereClause}
+            ) sub
+            WHERE value <> ''
             GROUP BY value
-            HAVING TRIM(unnest(string_to_array(w.propietario, '|'))) != ''
             ORDER BY count DESC LIMIT 100
         `, whereParams).catch(() => ({ rows: [] }));
 
         const religionesR = await db.query(`
-            SELECT TRIM(unnest(string_to_array(w.religion, '|'))) as value, COUNT(*) as count
-            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-            WHERE w.religion IS NOT NULL AND w.religion != '' AND ${whereClause}
+            SELECT value, COUNT(*) as count FROM (
+              SELECT TRIM(unnest(string_to_array(w.religion, '|'))) as value
+              FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+              WHERE w.religion IS NOT NULL AND w.religion != '' AND ${whereClause}
+            ) sub
+            WHERE value <> ''
             GROUP BY value
-            HAVING TRIM(unnest(string_to_array(w.religion, '|'))) != ''
             ORDER BY count DESC LIMIT 50
         `, whereParams).catch(() => ({ rows: [] }));
 
         const dedicacionesR = await db.query(`
-            SELECT TRIM(unnest(string_to_array(w.dedicado_a, '|'))) as value, COUNT(*) as count
-            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-            WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${whereClause}
+            SELECT value, COUNT(*) as count FROM (
+              SELECT TRIM(unnest(string_to_array(w.dedicado_a, '|'))) as value
+              FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+              WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${whereClause}
+            ) sub
+            WHERE value <> ''
             GROUP BY value
-            HAVING TRIM(unnest(string_to_array(w.dedicado_a, '|'))) != ''
             ORDER BY count DESC LIMIT 100
         `, whereParams).catch(() => ({ rows: [] }));
 
         const partesDeR = await db.query(`
-            SELECT TRIM(unnest(string_to_array(w.parte_de, '|'))) as value, COUNT(*) as count
-            FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-            WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${whereClause}
+            SELECT value, COUNT(*) as count FROM (
+              SELECT TRIM(unnest(string_to_array(w.parte_de, '|'))) as value
+              FROM wikidata w JOIN bienes b ON w.bien_id = b.id
+              WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${whereClause}
+            ) sub
+            WHERE value <> ''
             GROUP BY value
-            HAVING TRIM(unnest(string_to_array(w.parte_de, '|'))) != ''
             ORDER BY count DESC LIMIT 200
         `, whereParams).catch(() => ({ rows: [] }));
 
