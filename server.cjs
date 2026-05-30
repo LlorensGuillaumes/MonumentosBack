@@ -1549,11 +1549,25 @@ app.get('/api/monumentos/:id', async (req, res) => {
 
         const [imagenesResult, eventos] = await Promise.all([
             db.query(
-                `SELECT DISTINCT ON (url) url, titulo, autor, fuente, metadata
-                 FROM imagenes
-                 WHERE bien_id = ?
-                   AND url <> COALESCE(?, '')
-                 ORDER BY url, id`,
+                `SELECT url, titulo, autor, fuente, metadata
+                 FROM (
+                   SELECT DISTINCT ON (url) url, titulo, autor, fuente, metadata, id
+                   FROM imagenes
+                   WHERE bien_id = ?
+                     AND url <> COALESCE(?, '')
+                   ORDER BY url, id
+                 ) sub
+                 ORDER BY
+                   CASE LOWER(COALESCE(fuente, ''))
+                     WHEN 'wikidata' THEN 1
+                     WHEN 'wikimedia commons' THEN 1
+                     WHEN 'commons' THEN 1
+                     WHEN 'sipca' THEN 2
+                     WHEN 'diba' THEN 3
+                     WHEN 'europeana' THEN 4
+                     ELSE 5
+                   END,
+                   id`,
                 [id, bien.imagen_url || null]
             ),
             db.obtenerEventosMonumento(id),
