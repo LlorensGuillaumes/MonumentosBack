@@ -1987,46 +1987,29 @@ app.get('/api/filtros', async (req, res) => {
         if (provincia) { whereParts.push(`b.provincia = $${pi++}`); whereParams.push(provincia); }
         const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1';
 
-        // Países disponibles
+        // Países con cascada
+        const cascPais = applyCascada('pais');
         const paisesR = await db.query(`
             SELECT pais as value, COUNT(*) as count
-            FROM bienes WHERE pais IS NOT NULL
+            FROM bienes b WHERE pais IS NOT NULL ${cascPais.whereExtra}
             GROUP BY pais ORDER BY LOWER(pais)
-        `);
+        `, cascPais.params);
 
-        // Regiones filtradas por país
-        let regionesR;
-        if (pais) {
-            regionesR = await db.query(`
-                SELECT comunidad_autonoma as value, pais, COUNT(*) as count
-                FROM bienes WHERE comunidad_autonoma IS NOT NULL AND pais = $1
-                GROUP BY comunidad_autonoma, pais ORDER BY LOWER(comunidad_autonoma)
-            `, [pais]);
-        } else {
-            regionesR = await db.query(`
-                SELECT comunidad_autonoma as value, pais, COUNT(*) as count
-                FROM bienes WHERE comunidad_autonoma IS NOT NULL
-                GROUP BY comunidad_autonoma, pais ORDER BY LOWER(comunidad_autonoma)
-            `);
-        }
+        // Regiones con cascada
+        const cascReg = applyCascada('region');
+        const regionesR = await db.query(`
+            SELECT comunidad_autonoma as value, pais, COUNT(*) as count
+            FROM bienes b WHERE comunidad_autonoma IS NOT NULL ${cascReg.whereExtra}
+            GROUP BY comunidad_autonoma, pais ORDER BY LOWER(comunidad_autonoma)
+        `, cascReg.params);
 
-        // Provincias filtradas
-        let provWhere = 'provincia IS NOT NULL';
-        let provParams = [];
-        let provPi = 1;
-        if (pais) {
-            provWhere += ` AND pais = $${provPi++}`;
-            provParams.push(pais);
-        }
-        if (region) {
-            provWhere += ` AND comunidad_autonoma = $${provPi++}`;
-            provParams.push(region);
-        }
+        // Provincias con cascada
+        const cascProv = applyCascada('provincia');
         const provinciasR = await db.query(`
             SELECT provincia as value, comunidad_autonoma as region, pais, COUNT(*) as count
-            FROM bienes WHERE ${provWhere}
+            FROM bienes b WHERE provincia IS NOT NULL ${cascProv.whereExtra}
             GROUP BY provincia, comunidad_autonoma, pais ORDER BY LOWER(provincia)
-        `, provParams);
+        `, cascProv.params);
 
         // Estilos filtrados (con cascada — excluye estilo)
         const cascEstilo = applyCascada('estilo');
