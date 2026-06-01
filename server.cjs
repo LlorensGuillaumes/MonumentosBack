@@ -1872,7 +1872,8 @@ app.get('/api/filtros', async (req, res) => {
             }
 
             // CLASIFICACIÓN (expandida a IN de tipos via CLASIFICACION_GRUPOS)
-            if (req.query.clasificacion && excludeField !== 'clasificacion' && excludeField !== 'tipo_monumento') {
+            // Sí se aplica al calcular tipo_monumento: si has elegido religiosa, los tipos disponibles son los religiosos
+            if (req.query.clasificacion && excludeField !== 'clasificacion') {
                 const tokens = String(req.query.clasificacion).split(',').map(s => s.trim()).filter(Boolean);
                 const validTokens = tokens.filter(t => CLASIFICACION_GRUPOS[t] || t === 'otros');
                 if (validTokens.length > 0) {
@@ -1899,7 +1900,7 @@ app.get('/api/filtros', async (req, res) => {
             }
 
             // TIPO MONUMENTO
-            if (req.query.tipo_monumento && excludeField !== 'tipo_monumento' && excludeField !== 'clasificacion') {
+            if (req.query.tipo_monumento && excludeField !== 'tipo_monumento') {
                 parts.push(`b.tipo_monumento = $${p++}`);
                 params.push(req.query.tipo_monumento);
             }
