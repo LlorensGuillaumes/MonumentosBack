@@ -1842,70 +1842,149 @@ app.get('/api/geojson', async (req, res) => {
 app.get('/api/filtros', async (req, res) => {
     try {
         const { pais, region, provincia } = req.query;
-        // Oleada B filtros activos (para cascada)
         const religionActiva = req.query.religion;
         const dedicadoActivo = req.query.dedicado_a;
         const parteActiva = req.query.parte_de;
         const propActivo = req.query.propietario;
 
-        // Build WHERE base (geográfico)
-        let whereParams = [];
-        let whereParts = [];
-        let pi = 1;
-        if (pais) {
-            whereParts.push(`b.pais = $${pi++}`);
-            whereParams.push(pais);
-        }
-        if (region) {
-            whereParts.push(`b.comunidad_autonoma = $${pi++}`);
-            whereParams.push(region);
-        }
-        if (provincia) {
-            whereParts.push(`b.provincia = $${pi++}`);
-            whereParams.push(provincia);
-        }
-        const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1';
+        // ========= CASCADA UNIFICADA =========
+        // Devuelve subquery "SELECT DISTINCT b.id FROM ... WHERE ..." con TODOS los filtros activos
+        // EXCEPTO el campo que se está calculando. Cada query del endpoint hace b.id IN (subquery).
+        function buildBienIdSubquery(excludeField) {
+            const parts = ['1=1'];
+            const params = [];
+            let p = 1;
+            let needsWikidata = false;
+            let needsEventos = false;
 
-        // Helper para añadir cascada Oleada B excluyendo una de las 4 props
-        // Devuelve { where, params } construidos sobre el wikidata `w`
-        function buildOleadaBCascade(excludeField) {
-            const parts = [];
-            const params = [...whereParams];
-            let p = whereParams.length + 1;
+            // GEO
+            if (pais && excludeField !== 'pais') {
+                parts.push(`b.pais = $${p++}`);
+                params.push(pais);
+            }
+            if (region && excludeField !== 'region') {
+                parts.push(`b.comunidad_autonoma = $${p++}`);
+                params.push(region);
+            }
+            if (provincia && excludeField !== 'provincia') {
+                parts.push(`b.provincia = $${p++}`);
+                params.push(provincia);
+            }
 
-            // Helper genérico para construir cláusula multivalor con OR de LIKEs
-            // Para religion: expandimos macro a variantes raw
-            const buildMultiValueClause = (col, valor, expandir = null) => {
+            // CLASIFICACIÓN (expandida a IN de tipos via CLASIFICACION_GRUPOS)
+            if (req.query.clasificacion && excludeField !== 'clasificacion' && excludeField !== 'tipo_monumento') {
+                const tokens = String(req.query.clasificacion).split(',').map(s => s.trim()).filter(Boolean);
+                const validTokens = tokens.filter(t => CLASIFICACION_GRUPOS[t] || t === 'otros');
+                if (validTokens.length > 0) {
+                    const tiposExp = new Set();
+                    let includeOtros = false;
+                    for (const t of validTokens) {
+                        if (t === 'otros') includeOtros = true;
+                        else CLASIFICACION_GRUPOS[t].forEach(v => tiposExp.add(v));
+                    }
+                    const tiposArr = Array.from(tiposExp);
+                    const conds = [];
+                    if (tiposArr.length > 0) {
+                        const ph = tiposArr.map(() => `$${p++}`);
+                        conds.push(`b.tipo_monumento IN (${ph.join(',')})`);
+                        params.push(...tiposArr);
+                    }
+                    if (includeOtros) {
+                        const ph = ALL_CLASSIFIED_TIPOS.map(() => `$${p++}`);
+                        conds.push(`(b.tipo_monumento IS NULL OR b.tipo_monumento NOT IN (${ph.join(',')}))`);
+                        params.push(...ALL_CLASSIFIED_TIPOS);
+                    }
+                    if (conds.length > 0) parts.push(`(${conds.join(' OR ')})`);
+                }
+            }
+
+            // TIPO MONUMENTO
+            if (req.query.tipo_monumento && excludeField !== 'tipo_monumento' && excludeField !== 'clasificacion') {
+                parts.push(`b.tipo_monumento = $${p++}`);
+                params.push(req.query.tipo_monumento);
+            }
+
+            // PERIODO
+            if (req.query.periodo && excludeField !== 'periodo') {
+                parts.push(`b.periodo = $${p++}`);
+                params.push(req.query.periodo);
+            }
+
+            // ESTILO (JOIN wikidata)
+            if (req.query.estilo && excludeField !== 'estilo') {
+                needsWikidata = true;
+                parts.push(`w.estilo = $${p++}`);
+                params.push(req.query.estilo);
+            }
+
+            // EVENTO_PADRE (JOIN eventos_monumento)
+            if (req.query.evento_padre && excludeField !== 'evento_padre' && excludeField !== 'evento') {
+                needsEventos = true;
+                parts.push(`em.qid_evento_padre = $${p++}`);
+                params.push(req.query.evento_padre);
+            }
+
+            // EVENTO
+            if (req.query.evento && excludeField !== 'evento') {
+                needsEventos = true;
+                parts.push(`em.qid_evento = $${p++}`);
+                params.push(req.query.evento);
+            }
+
+            // OLEADA B
+            const olApply = (col, valor, expandir = null) => {
+                needsWikidata = true;
                 const valores = expandir ? expandir(valor) : [valor];
                 const orParts = [];
                 for (const v of valores) {
+                    const low = v.toLowerCase();
                     orParts.push(
                         `LOWER(${col}) = $${p} OR LOWER(${col}) LIKE $${p + 1} OR LOWER(${col}) LIKE $${p + 2} OR LOWER(${col}) LIKE $${p + 3}`
                     );
-                    const low = v.toLowerCase();
                     params.push(low, `${low}|%`, `%|${low}|%`, `%|${low}`);
                     p += 4;
                 }
-                return `(${orParts.join(' OR ')})`;
+                parts.push(`(${orParts.join(' OR ')})`);
             };
-
             if (religionActiva && excludeField !== 'religion') {
-                parts.push(buildMultiValueClause('w.religion', religionActiva, expandirReligionParaFiltro));
+                olApply('w.religion', religionActiva, expandirReligionParaFiltro);
             }
-            if (dedicadoActivo && excludeField !== 'dedicado_a') {
-                parts.push(buildMultiValueClause('w.dedicado_a', dedicadoActivo));
-            }
-            if (parteActiva && excludeField !== 'parte_de') {
-                parts.push(buildMultiValueClause('w.parte_de', parteActiva));
-            }
-            if (propActivo && excludeField !== 'propietario') {
-                parts.push(buildMultiValueClause('w.propietario', propActivo));
-            }
+            if (dedicadoActivo && excludeField !== 'dedicado_a') olApply('w.dedicado_a', dedicadoActivo);
+            if (parteActiva && excludeField !== 'parte_de') olApply('w.parte_de', parteActiva);
+            if (propActivo && excludeField !== 'propietario') olApply('w.propietario', propActivo);
+
+            // Si no hay ningún filtro activo aparte del 1=1, retornar null (no filtrar)
+            if (parts.length === 1) return null;
+
+            let fromClause = 'FROM bienes b';
+            if (needsWikidata) fromClause += ' LEFT JOIN wikidata w ON b.id = w.bien_id';
+            if (needsEventos) fromClause += ' LEFT JOIN eventos_monumento em ON b.id = em.bien_id';
+
             return {
-                where: parts.length > 0 ? whereClause + ' AND ' + parts.join(' AND ') : whereClause,
+                sql: `SELECT DISTINCT b.id ${fromClause} WHERE ${parts.join(' AND ')}`,
                 params,
             };
         }
+
+        // Helper: aplica cascada a una query base
+        // Devuelve { whereExtra, params } - whereExtra es "AND b.id IN (subquery)" o cadena vacía
+        function applyCascada(excludeField, tableAlias = 'b') {
+            const sub = buildBienIdSubquery(excludeField);
+            if (!sub) return { whereExtra: '', params: [] };
+            return {
+                whereExtra: ` AND ${tableAlias}.${tableAlias === 'b' ? 'id' : 'bien_id'} IN (${sub.sql})`,
+                params: sub.params,
+            };
+        }
+
+        // Legacy: whereClause solo geográfico (mantenido para queries que no migraron aún)
+        let whereParams = [];
+        let whereParts = [];
+        let pi = 1;
+        if (pais) { whereParts.push(`b.pais = $${pi++}`); whereParams.push(pais); }
+        if (region) { whereParts.push(`b.comunidad_autonoma = $${pi++}`); whereParams.push(region); }
+        if (provincia) { whereParts.push(`b.provincia = $${pi++}`); whereParams.push(provincia); }
+        const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1';
 
         // Países disponibles
         const paisesR = await db.query(`
@@ -1948,55 +2027,53 @@ app.get('/api/filtros', async (req, res) => {
             GROUP BY provincia, comunidad_autonoma, pais ORDER BY LOWER(provincia)
         `, provParams);
 
-        // Estilos filtrados (normalizados multi-idioma → español)
+        // Estilos filtrados (con cascada — excluye estilo)
+        const cascEstilo = applyCascada('estilo');
         const estilosR = await db.query(`
             SELECT w.estilo as value, COUNT(*) as count
             FROM wikidata w
             JOIN bienes b ON w.bien_id = b.id
-            WHERE w.estilo IS NOT NULL AND w.estilo != '' AND ${whereClause}
+            WHERE w.estilo IS NOT NULL AND w.estilo != '' ${cascEstilo.whereExtra}
             GROUP BY w.estilo ORDER BY LOWER(w.estilo)
-        `, whereParams);
+        `, cascEstilo.params);
         const estilos = normalizarEstilos(estilosR.rows);
 
-        // Tipos de monumento filtrados (clasificación enriquecida)
+        // Tipos de monumento filtrados
+        const cascTipo = applyCascada('tipo_monumento');
         const tiposMonumentoR = await db.query(`
             SELECT b.tipo_monumento as value, COUNT(*) as count
             FROM bienes b
-            WHERE b.tipo_monumento IS NOT NULL AND ${whereClause}
+            WHERE b.tipo_monumento IS NOT NULL ${cascTipo.whereExtra}
             GROUP BY b.tipo_monumento ORDER BY LOWER(b.tipo_monumento)
-        `, whereParams);
+        `, cascTipo.params);
 
         // Periodos filtrados
+        const cascPer = applyCascada('periodo');
         const periodosR = await db.query(`
             SELECT b.periodo as value, COUNT(*) as count
             FROM bienes b
-            WHERE b.periodo IS NOT NULL AND ${whereClause}
+            WHERE b.periodo IS NOT NULL ${cascPer.whereExtra}
             GROUP BY b.periodo ORDER BY LOWER(b.periodo)
-        `, whereParams);
+        `, cascPer.params);
 
         // Municipios filtrados (solo si hay al menos un filtro geográfico para evitar queries masivas)
         let municipiosR;
         if (pais || region || provincia) {
+            const cascMun = applyCascada('municipio');
             municipiosR = await db.query(`
                 SELECT b.municipio as value, b.provincia as provincia,
                        b.comunidad_autonoma as region, b.pais, COUNT(*) as count
                 FROM bienes b
-                WHERE b.municipio IS NOT NULL AND b.municipio != '' AND ${whereClause}
+                WHERE b.municipio IS NOT NULL AND b.municipio != '' ${cascMun.whereExtra}
                 GROUP BY b.municipio, b.provincia, b.comunidad_autonoma, b.pais
                 ORDER BY LOWER(b.municipio)
-            `, whereParams);
+            `, cascMun.params);
         } else {
             municipiosR = { rows: [] };
         }
 
-        // Eventos históricos filtrados (value = qid_evento para i18n)
-        // Si hay filtro evento_padre, restringir la lista de eventos a sus hijos
-        const eventoPadreFiltro = req.query.evento_padre;
-        const eventosWhere = eventoPadreFiltro
-            ? `em.qid_evento IS NOT NULL AND em.qid_evento_padre = $${whereParams.length + 1} AND ${whereClause}`
-            : `em.qid_evento IS NOT NULL AND em.qid_evento_padre IS NOT NULL AND ${whereClause}`;
-        const eventosParams = eventoPadreFiltro ? [...whereParams, eventoPadreFiltro] : whereParams;
-
+        // Eventos históricos (con cascada)
+        const cascEv = applyCascada('evento');
         const eventosR = await db.query(`
             SELECT em.qid_evento as value,
                    em.qid_evento_padre as padre,
@@ -2004,20 +2081,20 @@ app.get('/api/filtros', async (req, res) => {
                    COUNT(DISTINCT em.bien_id) as count
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
-            WHERE ${eventosWhere}
+            WHERE em.qid_evento IS NOT NULL AND em.qid_evento_padre IS NOT NULL ${cascEv.whereExtra}
             GROUP BY em.qid_evento, em.qid_evento_padre
             ORDER BY LOWER(MIN(em.evento))
-        `, eventosParams);
+        `, cascEv.params);
 
-        // Categorías padre con su contador agregado
+        const cascEvP = applyCascada('evento_padre');
         const eventosPadresR = await db.query(`
             SELECT em.qid_evento_padre as value,
                    COUNT(DISTINCT em.bien_id) as count
             FROM eventos_monumento em
             JOIN bienes b ON em.bien_id = b.id
-            WHERE em.qid_evento_padre IS NOT NULL AND ${whereClause}
+            WHERE em.qid_evento_padre IS NOT NULL ${cascEvP.whereExtra}
             GROUP BY em.qid_evento_padre
-        `, whereParams);
+        `, cascEvP.params);
 
         // Hardcoded labels para las categorías padre (fallback si i18n no traduce)
         const PADRE_LABELS = {
@@ -2043,55 +2120,50 @@ app.get('/api/filtros', async (req, res) => {
         }
         eventosPadresR.rows.sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
 
-        // Oleada B — distinct values de propiedades Wikidata estructuradas
-        // Usamos unnest(string_to_array(..., '|')) para extraer valores individuales
-        // (las columnas almacenan múltiples valores separados por " | ")
-        // Cascada Oleada B: cada filtro se calcula excluyendo su propio valor activo
-        // Tomamos TOP 100/200 por count primero (más relevantes) y luego reordenamos alfabético en JS
-        const cascProp = buildOleadaBCascade('propietario');
+        // Oleada B con cascada extendida (incluye geo + clasif + tipo + estilo + periodo + evento + otros Oleada B)
+        const cascProp = applyCascada('propietario');
         const propietariosR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.propietario, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.propietario IS NOT NULL AND w.propietario != '' AND ${cascProp.where}
+              WHERE w.propietario IS NOT NULL AND w.propietario != '' ${cascProp.whereExtra}
             ) sub
             WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
             ORDER BY count DESC LIMIT 100
         `, cascProp.params).catch(() => ({ rows: [] }));
 
-        const cascRel = buildOleadaBCascade('religion');
+        const cascRel = applyCascada('religion');
         const religionesRawR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.religion, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.religion IS NOT NULL AND w.religion != '' AND ${cascRel.where}
+              WHERE w.religion IS NOT NULL AND w.religion != '' ${cascRel.whereExtra}
             ) sub
             WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
         `, cascRel.params).catch(() => ({ rows: [] }));
 
-        // Normalizar religiones a categorías macro
         const religionesR = { rows: normalizarReligiones(religionesRawR.rows) };
 
-        const cascDed = buildOleadaBCascade('dedicado_a');
+        const cascDed = applyCascada('dedicado_a');
         const dedicacionesR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.dedicado_a, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' AND ${cascDed.where}
+              WHERE w.dedicado_a IS NOT NULL AND w.dedicado_a != '' ${cascDed.whereExtra}
             ) sub
             WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
             ORDER BY count DESC LIMIT 100
         `, cascDed.params).catch(() => ({ rows: [] }));
 
-        const cascParte = buildOleadaBCascade('parte_de');
+        const cascParte = applyCascada('parte_de');
         const partesDeR = await db.query(`
             SELECT value, COUNT(*) as count FROM (
               SELECT TRIM(unnest(string_to_array(w.parte_de, '|'))) as value
               FROM wikidata w JOIN bienes b ON w.bien_id = b.id
-              WHERE w.parte_de IS NOT NULL AND w.parte_de != '' AND ${cascParte.where}
+              WHERE w.parte_de IS NOT NULL AND w.parte_de != '' ${cascParte.whereExtra}
             ) sub
             WHERE value <> '' AND value !~ '^Q[0-9]+$'
             GROUP BY value
