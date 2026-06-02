@@ -1360,19 +1360,41 @@ async function toolBuscarRutas(args) {
         const r = await db.query(`SELECT id, slug, nombre, descripcion, region, pais, tema, num_paradas FROM rutas_culturales WHERE activa = true LIMIT ${limit}`);
         return { count: r.rows.length, rutas: r.rows };
     }
-    const conds = palabras.map((_, i) => `(LOWER(nombre) LIKE $${i + 1} OR LOWER(descripcion) LIKE $${i + 1} OR LOWER(region) LIKE $${i + 1} OR LOWER(tema) LIKE $${i + 1})`).join(' OR ');
+
     const params = palabras.map(p => `%${p.toLowerCase()}%`);
+    const condRC = palabras.map((_, i) => `(LOWER(rc.nombre) LIKE $${i + 1} OR LOWER(COALESCE(rc.descripcion, '')) LIKE $${i + 1} OR LOWER(COALESCE(rc.region, '')) LIKE $${i + 1} OR LOWER(COALESCE(rc.tema, '')) LIKE $${i + 1})`).join(' OR ');
+    const condParada = palabras.map((_, i) => `(LOWER(COALESCE(rcp.nombre, '')) LIKE $${i + 1} OR LOWER(COALESCE(rcp.localidad, '')) LIKE $${i + 1} OR LOWER(COALESCE(rcp.municipio, '')) LIKE $${i + 1})`).join(' OR ');
+    const condBien = palabras.map((_, i) => `(LOWER(COALESCE(b.denominacion, '')) LIKE $${i + 1} OR LOWER(COALESCE(b.municipio, '')) LIKE $${i + 1} OR LOWER(COALESCE(b.comarca, '')) LIKE $${i + 1} OR LOWER(COALESCE(b.provincia, '')) LIKE $${i + 1} OR LOWER(COALESCE(b.comunidad_autonoma, '')) LIKE $${i + 1})`).join(' OR ');
+
+    // Buscar en propiedades de la ruta + en las paradas (nombre/localidad/municipio) + en los bienes asociados (denominacion/municipio/comarca/region)
     const r = await db.query(`
-        SELECT id, slug, nombre, descripcion, region, pais, tema, num_paradas
-        FROM rutas_culturales WHERE (${conds}) AND activa = true
-        ORDER BY num_paradas DESC NULLS LAST
+        WITH candidatas AS (
+            SELECT rc.id, 'ruta' AS via FROM rutas_culturales rc WHERE rc.activa = true AND (${condRC})
+            UNION
+            SELECT DISTINCT rcp.ruta_id AS id, 'parada' AS via
+            FROM rutas_culturales_paradas rcp
+            WHERE ${condParada}
+            UNION
+            SELECT DISTINCT rcp.ruta_id AS id, 'bien' AS via
+            FROM rutas_culturales_paradas rcp
+            JOIN bienes b ON b.id = rcp.bien_id
+            WHERE ${condBien}
+        )
+        SELECT rc.id, rc.slug, rc.nombre, rc.descripcion, rc.region, rc.pais, rc.tema, rc.num_paradas,
+               STRING_AGG(DISTINCT c.via, ',') AS via_list
+        FROM candidatas c
+        JOIN rutas_culturales rc ON rc.id = c.id
+        WHERE rc.activa = true
+        GROUP BY rc.id, rc.slug, rc.nombre, rc.descripcion, rc.region, rc.pais, rc.tema, rc.num_paradas
+        ORDER BY rc.num_paradas DESC NULLS LAST
         LIMIT ${limit}
     `, params);
+
     return {
         count: r.rows.length,
-        rutas: r.rows.map(r => ({
-            ...r,
-            descripcion: r.descripcion ? r.descripcion.substring(0, 300) : null,
+        rutas: r.rows.map(row => ({
+            ...row,
+            descripcion: row.descripcion ? row.descripcion.substring(0, 300) : null,
         })),
     };
 }
