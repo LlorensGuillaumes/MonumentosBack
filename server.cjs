@@ -927,6 +927,190 @@ app.patch('/api/admin/usuarios/:id/premium', authMiddleware, adminMiddleware, as
 // ============== ADMIN ANALYTICS ENDPOINTS ==============
 
 /**
+ * POST /api/admin/chat
+ * MVP zero-cost RAG: busca monumentos relevantes a la pregunta + llama a Groq con contexto
+ * Si no hay GROQ_API_KEY, devuelve solo los monumentos relevantes (modo "fuentes sin LLM")
+ */
+const STOPWORDS_ES = new Set(['el','la','los','las','un','una','de','del','en','y','o','que','a','por','con','para','sobre','este','esta','ese','esa','qué','quién','cómo','cuándo','dónde','hay','tienen','tiene']);
+
+function extraerPalabrasClave(question) {
+    return question
+        .toLowerCase()
+        .replace(/[¿?¡!.,;:()"']/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length >= 3 && !STOPWORDS_ES.has(w));
+}
+
+async function buscarMonumentosRelevantes(question, limit = 5) {
+    const palabras = extraerPalabrasClave(question);
+    if (palabras.length === 0) return [];
+
+    // Búsqueda combinada: denominacion (peso alto) + bien_personas.nombre (peso medio)
+    const ilikeConds = palabras.map((_, i) => `b.denominacion ILIKE $${i + 1}`).join(' OR ');
+    const personaConds = palabras.map((_, i) => `bp.nombre ILIKE $${i + 1}`).join(' OR ');
+    const params = palabras.map(p => `%${p}%`);
+    const qParamIdx = params.length + 1;
+    params.push(question);
+
+    const r = await db.query(`
+        WITH matches AS (
+            -- Match en denominación de bien
+            SELECT b.id, similarity(LOWER(b.denominacion), LOWER($${qParamIdx})) AS sim, 'denom' AS via
+            FROM bienes b WHERE ${ilikeConds}
+            UNION
+            -- Match en nombre de persona asociada
+            SELECT DISTINCT bp.bien_id AS id,
+                   GREATEST(similarity(LOWER(bp.nombre), LOWER($${qParamIdx})), 0.4) AS sim,
+                   'persona' AS via
+            FROM bien_personas bp WHERE ${personaConds}
+        ),
+        ranked AS (
+            SELECT id, MAX(sim) AS sim, STRING_AGG(DISTINCT via, ',') AS via_list
+            FROM matches GROUP BY id
+            ORDER BY MAX(sim) DESC
+            LIMIT ${limit * 3}
+        )
+        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.tipo_monumento, b.periodo, b.latitud, b.longitud,
+               w.qid, w.wikipedia_url, w.descripcion AS wd_desc,
+               r.sim, r.via_list
+        FROM ranked r
+        JOIN bienes b ON b.id = r.id
+        LEFT JOIN wikidata w ON b.id = w.bien_id
+        ORDER BY r.sim DESC
+    `, params);
+
+    return r.rows.slice(0, limit).map(row => ({
+        bien_id: row.id,
+        denominacion: row.denominacion,
+        municipio: row.municipio,
+        provincia: row.provincia,
+        pais: row.pais,
+        tipo_monumento: row.tipo_monumento,
+        periodo: row.periodo,
+        qid: row.qid,
+        wikipedia_url: row.wikipedia_url,
+        wd_desc: row.wd_desc,
+        similarity: row.sim,
+        via: row.via_list,
+    }));
+}
+
+async function obtenerExtractoWiki(bien_id, lang = 'es') {
+    try {
+        const enrPool = db.getEnrichmentPool ? db.getEnrichmentPool(lang) : null;
+        if (!enrPool) return null;
+        const r = await enrPool.query(
+            `SELECT extract, full_text FROM wikipedia_extracts WHERE bien_id = $1`,
+            [bien_id]
+        );
+        return r.rows[0] || null;
+    } catch { return null; }
+}
+
+async function llamarGroq(question, contexto) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
+
+    const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo. Respondes basándote ÚNICAMENTE en el contexto proporcionado de la base de datos Patrimonio Europeo. Si el contexto no tiene la información, dilo claramente. Responde en el idioma de la pregunta del usuario. Sé conciso (máx 4-5 párrafos). Cita los monumentos con su #id cuando los menciones.`;
+
+    const userPrompt = `Pregunta: ${question}\n\nContexto disponible:\n${contexto}\n\nResponde basándote SOLO en el contexto anterior.`;
+
+    const t0 = Date.now();
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.3,
+            max_tokens: 700,
+        }),
+    });
+
+    if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`Groq ${res.status}: ${errBody.substring(0, 200)}`);
+    }
+    const data = await res.json();
+    return {
+        answer: data.choices[0]?.message?.content || '',
+        model: data.model,
+        tokens_in: data.usage?.prompt_tokens,
+        tokens_out: data.usage?.completion_tokens,
+        elapsed_ms: Date.now() - t0,
+    };
+}
+
+app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const { question } = req.body;
+        if (!question || question.trim().length < 3) {
+            return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
+        }
+        const t0 = Date.now();
+
+        // 1. Buscar monumentos relevantes
+        const sources = await buscarMonumentosRelevantes(question, 5);
+
+        if (sources.length === 0) {
+            return res.json({
+                answer: 'No he encontrado monumentos relacionados con esa pregunta en el catálogo. Prueba con palabras clave más específicas (nombre de monumento, municipio, periodo arquitectónico…).',
+                sources: [],
+                meta: { mode: 'no-matches', elapsed_ms: Date.now() - t0 },
+            });
+        }
+
+        // 2. Construir contexto con extractos Wikipedia
+        const ctxBlocks = [];
+        for (const s of sources) {
+            const wiki = await obtenerExtractoWiki(s.bien_id, 'es');
+            const desc = wiki?.extract || s.wd_desc || '(sin descripción)';
+            ctxBlocks.push(
+                `[Monumento #${s.bien_id}] ${s.denominacion}\n` +
+                `Ubicación: ${[s.municipio, s.provincia, s.pais].filter(Boolean).join(', ')}\n` +
+                `Tipo: ${s.tipo_monumento || 'N/A'} · Periodo: ${s.periodo || 'N/A'}\n` +
+                `Descripción: ${desc.substring(0, 600)}\n`
+            );
+        }
+        const contexto = ctxBlocks.join('\n---\n');
+
+        // 3. Si no hay Groq key, devolver solo fuentes
+        if (!process.env.GROQ_API_KEY) {
+            return res.json({
+                answer: 'Modo sin LLM (falta GROQ_API_KEY en Render). Te muestro los monumentos más relevantes a tu pregunta como fuentes — puedes consultarlos directamente.',
+                sources,
+                meta: { mode: 'no-llm', elapsed_ms: Date.now() - t0 },
+            });
+        }
+
+        // 4. Llamar a Groq
+        const llm = await llamarGroq(question, contexto);
+
+        res.json({
+            answer: llm.answer,
+            sources,
+            meta: {
+                mode: 'rag-groq',
+                model: llm.model,
+                tokens_in: llm.tokens_in,
+                tokens_out: llm.tokens_out,
+                elapsed_ms: Date.now() - t0,
+            },
+        });
+    } catch (err) {
+        console.error('Chat error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * GET /api/admin/analytics/summary
  * KPIs: total usuarios, activos, nuevos, distribución roles y métodos
  */

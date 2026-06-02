@@ -1783,6 +1783,7 @@ async function cerrar() {
 module.exports = {
     query,
     queryEnrichment,
+    getEnrichmentPool,
     transaction,
     inicializarTablas,
     insertarBien,
