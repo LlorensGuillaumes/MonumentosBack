@@ -963,8 +963,9 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
         } catch (e) { console.error('alias search error:', e.message); }
     }
 
-    // 2. Match en BD primaria: denominacion + bien_personas.nombre
+    // 2. Match en BD primaria: denominacion + municipio/provincia/comarca + bien_personas.nombre
     const ilikeConds = palabras.map((_, i) => `b.denominacion ILIKE $${i + 1}`).join(' OR ');
+    const geoConds = palabras.map((_, i) => `(b.municipio ILIKE $${i + 1} OR b.provincia ILIKE $${i + 1} OR b.comarca ILIKE $${i + 1})`).join(' OR ');
     const personaConds = palabras.map((_, i) => `bp.nombre ILIKE $${i + 1}`).join(' OR ');
     const params = palabras.map(p => `%${p}%`);
     const qParamIdx = params.length + 1;
@@ -980,19 +981,28 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
 
     const r = await db.query(`
         WITH matches AS (
+            -- Match en denominación (peso alto via similarity real)
             SELECT b.id, similarity(LOWER(b.denominacion), LOWER($${qParamIdx})) AS sim, 'denom' AS via
             FROM bienes b WHERE ${ilikeConds}
             UNION
+            -- Match en municipio/provincia/comarca (peso medio - solo si alguna palabra coincide con denom o persona)
+            SELECT b.id, 0.35 AS sim, 'geo' AS via
+            FROM bienes b WHERE ${geoConds}
+            UNION
+            -- Match en persona asociada
             SELECT DISTINCT bp.bien_id AS id,
                    GREATEST(similarity(LOWER(bp.nombre), LOWER($${qParamIdx})), 0.4) AS sim,
                    'persona' AS via
             FROM bien_personas bp WHERE ${personaConds}
             ${aliasUnion}
         ),
+        -- Bonus: si un bien aparece en múltiples fuentes, sumar score
         ranked AS (
-            SELECT id, MAX(sim) AS sim, STRING_AGG(DISTINCT via, ',') AS via_list
+            SELECT id,
+                   MAX(sim) + (COUNT(DISTINCT via) - 1) * 0.15 AS sim,
+                   STRING_AGG(DISTINCT via, ',' ORDER BY via) AS via_list
             FROM matches GROUP BY id
-            ORDER BY MAX(sim) DESC
+            ORDER BY 2 DESC
             LIMIT ${limit * 3}
         )
         SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
@@ -1290,17 +1300,26 @@ async function chatConToolUse(question) {
 
 Tienes acceso a 4 funciones (tools) que puedes invocar para consultar la base de datos:
 - buscar_por_filtros: filtros estructurados (tipo, periodo, religión, ubicación, dedicatoria, UNESCO, etc.)
-- buscar_por_persona: arquitectos/escultores/autores
-- buscar_por_texto: búsqueda fuzzy por nombre de monumento
+- buscar_por_persona: arquitectos/escultores/autores (P84 architect, P170 creator, etc.)
+- buscar_por_texto: búsqueda fuzzy por nombre o ubicación (incluye municipio/provincia/comarca)
 - info_monumento: ficha completa de UN monumento por su id
 
-Reglas:
-- Analiza la pregunta del usuario y elige la herramienta más adecuada.
-- Puedes encadenar herramientas (ej: buscar por filtros → luego info de uno concreto).
-- Usa el español/catalán/lengua del usuario en la respuesta.
-- Cita SIEMPRE los monumentos con su #id (formato "#12345").
-- Sé conciso pero informativo. Máx 5 párrafos.
-- Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
+REGLAS CRÍTICAS:
+1. **Idiomas**: el usuario puede preguntar en cualquier idioma (español, catalán, inglés, francés, italiano, portugués). Los VALORES de filtros en BD están en ESPAÑOL. Cuando llames a buscar_por_filtros, traduce los conceptos:
+   - "15th century" / "siglo XV" / "segle XV" → periodo="Gótico" (gótico tardío) o periodo="Renacimiento" (segunda mitad)
+   - "Romanesque" / "románico" / "romànic" → periodo="Románico"
+   - "castle" / "castillo" / "castell" → tipo_monumento="Castillo / Fortaleza"
+   - "church" / "iglesia" / "església" → tipo_monumento="Iglesia / Ermita"
+   - "Catalonia" / "Cataluña" / "Catalunya" → region="Cataluña"
+   - Responde al usuario en su mismo idioma.
+
+2. **Cuando el usuario describe vagamente algo**: usa buscar_por_texto incluyendo palabras de tipo + ubicación juntas. Ej: "monasterio en el Penedès" → buscar_por_texto({texto: "monasterio Penedès"}) — la función busca en denominación Y municipio/comarca.
+
+3. **Combina tools cuando ayude**: filtros amplios primero → si el usuario pide profundizar en uno, usa info_monumento(bien_id).
+
+4. **Cita SIEMPRE los monumentos con #id** (formato "#12345"). Sé conciso, máx 5 párrafos.
+
+5. Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
