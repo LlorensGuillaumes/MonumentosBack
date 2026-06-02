@@ -4067,6 +4067,78 @@ app.get('/api/monumentos/:id/eventos', async (req, res) => {
     }
 });
 
+// ============== PERSONAS (autores, arquitectos, escultores) — público ==============
+
+/**
+ * GET /api/personas?q=...&limit=...
+ * Devuelve personas (arquitectos, creadores, autores) con número de bienes asociados.
+ * Soporta búsqueda fuzzy (trigram + unaccent) sobre el nombre.
+ */
+app.get('/api/personas', async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+
+        let sql, params;
+        if (q.length >= 2) {
+            sql = `
+                SELECT nombre,
+                       STRING_AGG(DISTINCT rol, ',' ORDER BY rol) AS roles,
+                       COUNT(DISTINCT bien_id) AS n_bienes,
+                       MAX(qid_persona) AS qid
+                FROM bien_personas
+                WHERE unaccent(LOWER(nombre)) ILIKE unaccent(LOWER($1))
+                GROUP BY nombre
+                ORDER BY n_bienes DESC, nombre
+                LIMIT ${limit}
+            `;
+            params = [`%${q}%`];
+        } else {
+            // Sin q → top personas con más bienes
+            sql = `
+                SELECT nombre,
+                       STRING_AGG(DISTINCT rol, ',' ORDER BY rol) AS roles,
+                       COUNT(DISTINCT bien_id) AS n_bienes,
+                       MAX(qid_persona) AS qid
+                FROM bien_personas
+                GROUP BY nombre
+                ORDER BY n_bienes DESC
+                LIMIT ${limit}
+            `;
+            params = [];
+        }
+        const r = await db.query(sql, params);
+        res.json({ count: r.rows.length, personas: r.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/personas/:qid/bienes
+ * Devuelve los bienes asociados a una persona (por QID Wikidata).
+ */
+app.get('/api/personas/:qid/bienes', async (req, res) => {
+    try {
+        const qid = String(req.params.qid);
+        const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+        const r = await db.query(`
+            SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comarca, b.pais,
+                   b.tipo_monumento, b.periodo, b.latitud, b.longitud,
+                   bp.rol, bp.nombre AS persona, w.qid, w.imagen_url
+            FROM bien_personas bp
+            JOIN bienes b ON b.id = bp.bien_id
+            LEFT JOIN wikidata w ON b.id = w.bien_id
+            WHERE bp.qid_persona = $1
+            ORDER BY b.id
+            LIMIT ${limit}
+        `, [qid]);
+        res.json({ count: r.rows.length, bienes: r.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ============== RUTAS CULTURALES (público) ==============
 
 /**
