@@ -52,6 +52,23 @@ function getEnrichmentPool(lang) {
     return _enrichmentPools[key];
 }
 
+// Pool a BD de búsqueda (aliases, futuros embeddings)
+let _searchPool = null;
+function getSearchPool() {
+    if (_searchPool === null) {
+        const url = process.env.DATABASE_URL_SEARCH;
+        if (!url) {
+            _searchPool = false;
+            return null;
+        }
+        _searchPool = new Pool({
+            connectionString: url.replace(/^'|'$/g, '').replace(/\s+/g, ''),
+            ssl: { rejectUnauthorized: false },
+        });
+    }
+    return _searchPool || null;
+}
+
 async function queryEnrichment(lang, sql, params) {
     const pool = getEnrichmentPool(lang);
     if (!pool) return null;
@@ -1784,6 +1801,7 @@ module.exports = {
     query,
     queryEnrichment,
     getEnrichmentPool,
+    getSearchPool,
     transaction,
     inicializarTablas,
     insertarBien,

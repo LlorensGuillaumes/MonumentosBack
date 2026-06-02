@@ -945,24 +945,49 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
     const palabras = extraerPalabrasClave(question);
     if (palabras.length === 0) return [];
 
-    // Búsqueda combinada: denominacion (peso alto) + bien_personas.nombre (peso medio)
+    // 1. Buscar en aliases (BD search) — devuelve set de bien_ids
+    let bienIdsDesdeAlias = [];
+    const searchPool = db.getSearchPool();
+    if (searchPool) {
+        try {
+            const aliasConds = palabras.map((_, i) => `alias ILIKE $${i + 1}`).join(' OR ');
+            const aliasParams = palabras.map(p => `%${p}%`);
+            aliasParams.push(question);
+            const idxQ = aliasParams.length;
+            const aRes = await searchPool.query(`
+                SELECT bien_id, MAX(similarity(LOWER(alias), LOWER($${idxQ}))) AS sim
+                FROM bien_aliases WHERE ${aliasConds}
+                GROUP BY bien_id ORDER BY sim DESC LIMIT ${limit * 3}
+            `, aliasParams);
+            bienIdsDesdeAlias = aRes.rows.map(r => ({ id: r.bien_id, sim: r.sim }));
+        } catch (e) { console.error('alias search error:', e.message); }
+    }
+
+    // 2. Match en BD primaria: denominacion + bien_personas.nombre
     const ilikeConds = palabras.map((_, i) => `b.denominacion ILIKE $${i + 1}`).join(' OR ');
     const personaConds = palabras.map((_, i) => `bp.nombre ILIKE $${i + 1}`).join(' OR ');
     const params = palabras.map(p => `%${p}%`);
     const qParamIdx = params.length + 1;
     params.push(question);
 
+    let aliasUnion = '';
+    if (bienIdsDesdeAlias.length > 0) {
+        const aliasIds = bienIdsDesdeAlias.map(x => x.id).join(',');
+        aliasUnion = `UNION SELECT id, sim, 'alias' AS via FROM (VALUES ${
+            bienIdsDesdeAlias.map(x => `(${x.id}::int, ${(x.sim || 0.4).toFixed(3)}::float)`).join(',')
+        }) AS t(id, sim)`;
+    }
+
     const r = await db.query(`
         WITH matches AS (
-            -- Match en denominación de bien
             SELECT b.id, similarity(LOWER(b.denominacion), LOWER($${qParamIdx})) AS sim, 'denom' AS via
             FROM bienes b WHERE ${ilikeConds}
             UNION
-            -- Match en nombre de persona asociada
             SELECT DISTINCT bp.bien_id AS id,
                    GREATEST(similarity(LOWER(bp.nombre), LOWER($${qParamIdx})), 0.4) AS sim,
                    'persona' AS via
             FROM bien_personas bp WHERE ${personaConds}
+            ${aliasUnion}
         ),
         ranked AS (
             SELECT id, MAX(sim) AS sim, STRING_AGG(DISTINCT via, ',') AS via_list
@@ -972,7 +997,11 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
         )
         SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
                b.tipo_monumento, b.periodo, b.latitud, b.longitud,
+               b.heritage_world,
                w.qid, w.wikipedia_url, w.descripcion AS wd_desc,
+               w.arquitecto, w.estilo AS wd_estilo, w.material, w.altura, w.superficie,
+               w.inception, w.heritage_label,
+               w.religion, w.dedicado_a, w.parte_de, w.propietario,
                r.sim, r.via_list
         FROM ranked r
         JOIN bienes b ON b.id = r.id
@@ -988,12 +1017,60 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
         pais: row.pais,
         tipo_monumento: row.tipo_monumento,
         periodo: row.periodo,
+        latitud: row.latitud,
+        longitud: row.longitud,
+        heritage_world: row.heritage_world,
         qid: row.qid,
         wikipedia_url: row.wikipedia_url,
         wd_desc: row.wd_desc,
+        arquitecto: row.arquitecto,
+        wd_estilo: row.wd_estilo,
+        material: row.material,
+        altura: row.altura,
+        superficie: row.superficie,
+        inception: row.inception,
+        heritage_label: row.heritage_label,
+        religion: row.religion,
+        dedicado_a: row.dedicado_a,
+        parte_de: row.parte_de,
+        propietario: row.propietario,
         similarity: row.sim,
         via: row.via_list,
     }));
+}
+
+async function obtenerAliasesYEventos(bienIds) {
+    const result = { aliases: {}, eventos: {} };
+    if (bienIds.length === 0) return result;
+
+    const searchPool = db.getSearchPool();
+    if (searchPool) {
+        try {
+            const aRes = await searchPool.query(`
+                SELECT bien_id, alias, lang FROM bien_aliases
+                WHERE bien_id = ANY($1::int[]) AND es_principal = FALSE
+                ORDER BY bien_id, lang
+            `, [bienIds]);
+            for (const r of aRes.rows) {
+                if (!result.aliases[r.bien_id]) result.aliases[r.bien_id] = [];
+                result.aliases[r.bien_id].push(`${r.alias} (${r.lang})`);
+            }
+        } catch (e) { console.error('aliases lookup:', e.message); }
+    }
+
+    try {
+        const eRes = await db.query(`
+            SELECT bien_id, evento, qid_evento_padre FROM eventos_monumento
+            WHERE bien_id = ANY($1::int[])
+            ORDER BY bien_id
+        `, [bienIds]);
+        for (const r of eRes.rows) {
+            if (!result.eventos[r.bien_id]) result.eventos[r.bien_id] = [];
+            result.eventos[r.bien_id].push(r.evento);
+        }
+    } catch (e) { console.error('eventos lookup:', e.message); }
+
+    return result;
 }
 
 async function obtenerExtractoWiki(bien_id, lang = 'es') {
@@ -1076,31 +1153,60 @@ app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) =>
             });
         }
 
-        // 2. Construir contexto con extractos Wikipedia + personas asociadas
+        // 2. Construir contexto enriquecido
         const bienIds = sources.map(s => s.bien_id);
+
+        // Personas asociadas (architect, creator, etc.)
         const personasRes = await db.query(`
             SELECT bien_id, nombre, rol FROM bien_personas
-            WHERE bien_id = ANY($1::int[])
-            ORDER BY bien_id, rol
+            WHERE bien_id = ANY($1::int[]) ORDER BY bien_id, rol
         `, [bienIds]);
         const personasByBien = {};
-        for (const row of personasRes.rows) {
-            if (!personasByBien[row.bien_id]) personasByBien[row.bien_id] = [];
-            personasByBien[row.bien_id].push(`${row.nombre} (${row.rol})`);
+        for (const r of personasRes.rows) {
+            if (!personasByBien[r.bien_id]) personasByBien[r.bien_id] = [];
+            personasByBien[r.bien_id].push(`${r.nombre} (${r.rol})`);
         }
+
+        // Aliases + eventos
+        const extras = await obtenerAliasesYEventos(bienIds);
 
         const ctxBlocks = [];
         for (const s of sources) {
             const wiki = await obtenerExtractoWiki(s.bien_id, 'es');
-            const fullText = wiki?.full_text || wiki?.extract || s.wd_desc || '(sin descripción)';
+            const fullText = wiki?.full_text || wiki?.extract || s.wd_desc || '';
             const personas = personasByBien[s.bien_id];
-            ctxBlocks.push(
-                `[Monumento #${s.bien_id}] ${s.denominacion}\n` +
-                `Ubicación: ${[s.municipio, s.provincia, s.pais].filter(Boolean).join(', ')}\n` +
-                `Tipo: ${s.tipo_monumento || 'N/A'} · Periodo: ${s.periodo || 'N/A'}\n` +
-                (personas ? `Personas asociadas: ${personas.join(', ')}\n` : '') +
-                `Descripción: ${fullText.substring(0, 1500)}\n`
-            );
+            const aliases = extras.aliases[s.bien_id];
+            const eventos = extras.eventos[s.bien_id];
+
+            const lines = [`[Monumento #${s.bien_id}] ${s.denominacion}`];
+            if (aliases?.length > 0) lines.push(`Nombres alternativos: ${aliases.slice(0, 8).join(' / ')}`);
+            lines.push(`Ubicación: ${[s.municipio, s.provincia, s.pais].filter(Boolean).join(', ')}` +
+                (s.latitud && s.longitud ? ` (coords ${s.latitud.toFixed(3)}, ${s.longitud.toFixed(3)})` : ''));
+            lines.push(`Tipo: ${s.tipo_monumento || 'N/A'} · Periodo: ${s.periodo || 'N/A'}` +
+                (s.wd_estilo ? ` · Estilo: ${s.wd_estilo}` : ''));
+            if (s.inception) lines.push(`Fecha de construcción/inicio: ${s.inception}`);
+            if (personas?.length > 0) lines.push(`Personas asociadas: ${personas.join(', ')}`);
+            else if (s.arquitecto) lines.push(`Arquitecto: ${s.arquitecto}`);
+            const fisicas = [];
+            if (s.material) fisicas.push(`material: ${s.material}`);
+            if (s.altura) fisicas.push(`altura: ${s.altura}m`);
+            if (s.superficie) fisicas.push(`superficie: ${s.superficie}m²`);
+            if (fisicas.length > 0) lines.push(`Características físicas: ${fisicas.join(' · ')}`);
+            const semantico = [];
+            if (s.religion) semantico.push(`religión: ${s.religion}`);
+            if (s.dedicado_a) semantico.push(`dedicado a: ${s.dedicado_a}`);
+            if (s.parte_de) semantico.push(`parte de: ${s.parte_de}`);
+            if (s.propietario) semantico.push(`propietario: ${s.propietario}`);
+            if (semantico.length > 0) lines.push(semantico.join(' · '));
+            const patrim = [];
+            if (s.heritage_world === 'unesco') patrim.push('UNESCO Patrimonio Mundial');
+            if (s.heritage_world === 'european') patrim.push('European Heritage Label');
+            if (s.heritage_label) patrim.push(s.heritage_label);
+            if (patrim.length > 0) lines.push(`Reconocimientos: ${patrim.join(' · ')}`);
+            if (eventos?.length > 0) lines.push(`Eventos históricos asociados: ${eventos.slice(0, 6).join(', ')}`);
+            if (fullText) lines.push(`Descripción Wikipedia: ${fullText.substring(0, 1500)}`);
+
+            ctxBlocks.push(lines.join('\n'));
         }
         const contexto = ctxBlocks.join('\n---\n');
 
