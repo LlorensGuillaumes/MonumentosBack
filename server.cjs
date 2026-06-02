@@ -1085,52 +1085,316 @@ async function obtenerExtractoWiki(bien_id, lang = 'es') {
     } catch { return null; }
 }
 
-async function llamarGroq(question, contexto) {
+// ===== TOOLS para function calling =====
+const CHAT_TOOLS = [
+    {
+        type: 'function',
+        function: {
+            name: 'buscar_por_filtros',
+            description: 'Busca monumentos en el catálogo aplicando filtros estructurados. Útil para preguntas como "castillos del s.XV en España", "iglesias mudéjares en Aragón", "monumentos UNESCO en Cataluña".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    pais: { type: 'string', description: 'País: España, Italia, Francia, Portugal' },
+                    region: { type: 'string', description: 'Comunidad autónoma o región (Cataluña, Aragón, Andalucía, Toscana, etc.)' },
+                    provincia: { type: 'string' },
+                    municipio: { type: 'string' },
+                    tipo_monumento: { type: 'string', description: 'Tipo exacto: Castillo / Fortaleza, Iglesia / Ermita, Catedral, Monasterio / Convento, Palacio, Casa señorial / Mansión, Yacimiento arqueológico, Megalítico, Torre, Muralla, Puente, Acueducto, Faro, Molino, Cruz / Crucero, etc.' },
+                    periodo: { type: 'string', description: 'Periodo: Prehistoria, Antiguo / Romano, Prerrománico, Románico, Gótico, Mudéjar, Mozárabe, Renacimiento, Barroco, Neoclásico, Modernismo, Contemporáneo' },
+                    estilo: { type: 'string' },
+                    religion: { type: 'string', description: 'Catolicismo, Cristianismo ortodoxo, Protestantismo, Islam, Judaísmo, Budismo, etc.' },
+                    dedicado_a: { type: 'string', description: 'Advocación o dedicatoria (Virgen María, Santiago el Mayor, San Pedro, etc.)' },
+                    parte_de: { type: 'string', description: 'Conjunto al que pertenece (Camino de Santiago, Red Natura 2000, etc.)' },
+                    propietario: { type: 'string' },
+                    heritage_world: { type: 'string', enum: ['unesco', 'european'], description: 'unesco = Patrimonio Mundial UNESCO; european = European Heritage Label' },
+                    limit: { type: 'integer', description: 'Máximo de resultados (1-15)', default: 10 },
+                },
+                required: [],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'buscar_por_persona',
+            description: 'Busca monumentos asociados a una persona (arquitecto, escultor, autor, creador). Útil para preguntas como "obras de Gaudí", "quién es Cañas", "esculturas de Mariano Benlliure".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    nombre: { type: 'string', description: 'Nombre o apellido de la persona' },
+                    limit: { type: 'integer', default: 10 },
+                },
+                required: ['nombre'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'buscar_por_texto',
+            description: 'Búsqueda textual fuzzy en nombres de monumentos. Usa esta cuando el usuario pregunte por un monumento concreto o no esté claro qué filtros aplicar.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    texto: { type: 'string', description: 'Palabras clave o nombre del monumento' },
+                    limit: { type: 'integer', default: 8 },
+                },
+                required: ['texto'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'info_monumento',
+            description: 'Obtiene la ficha completa de UN monumento por su id (incluye descripción Wikipedia, personas asociadas, propiedades). Usa cuando el usuario te dé un #id concreto o pida profundizar en uno.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    bien_id: { type: 'integer' },
+                },
+                required: ['bien_id'],
+            },
+        },
+    },
+];
+
+// Ejecutores de tools
+async function toolBuscarPorFiltros(args) {
+    const filtros = [];
+    const params = [];
+    let p = 1;
+    const add = (col, val, op = '=') => {
+        if (!val) return;
+        if (op === 'LIKE') { filtros.push(`LOWER(${col}) LIKE $${p++}`); params.push(`%${val.toLowerCase()}%`); }
+        else { filtros.push(`${col} = $${p++}`); params.push(val); }
+    };
+    add('b.pais', args.pais);
+    add('b.comunidad_autonoma', args.region, 'LIKE');
+    add('b.provincia', args.provincia, 'LIKE');
+    add('b.municipio', args.municipio, 'LIKE');
+    add('b.tipo_monumento', args.tipo_monumento);
+    add('b.periodo', args.periodo);
+    add('w.estilo', args.estilo, 'LIKE');
+    add('b.heritage_world', args.heritage_world);
+    if (args.religion) {
+        const variantes = expandirReligionParaFiltro(args.religion);
+        const orParts = variantes.map(() => `LOWER(w.religion) LIKE $${p++}`);
+        filtros.push(`(${orParts.join(' OR ')})`);
+        for (const v of variantes) params.push(`%${v.toLowerCase()}%`);
+    }
+    if (args.dedicado_a) { filtros.push(`LOWER(w.dedicado_a) LIKE $${p++}`); params.push(`%${args.dedicado_a.toLowerCase()}%`); }
+    if (args.parte_de) { filtros.push(`LOWER(w.parte_de) LIKE $${p++}`); params.push(`%${args.parte_de.toLowerCase()}%`); }
+    if (args.propietario) { filtros.push(`LOWER(w.propietario) LIKE $${p++}`); params.push(`%${args.propietario.toLowerCase()}%`); }
+
+    if (filtros.length === 0) return { error: 'Sin filtros, especifica al menos uno.' };
+
+    const limit = Math.min(args.limit || 10, 15);
+    const sql = `
+        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.tipo_monumento, b.periodo, w.estilo, w.inception, w.religion,
+               w.dedicado_a, b.heritage_world
+        FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE ${filtros.join(' AND ')}
+        ORDER BY b.id LIMIT ${limit}
+    `;
+    const r = await db.query(sql, params);
+    return { count: r.rows.length, monumentos: r.rows };
+}
+
+async function toolBuscarPorPersona(args) {
+    const limit = Math.min(args.limit || 10, 15);
+    const r = await db.query(`
+        SELECT DISTINCT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.tipo_monumento, b.periodo, bp.nombre AS persona, bp.rol
+        FROM bien_personas bp JOIN bienes b ON b.id = bp.bien_id
+        WHERE LOWER(bp.nombre) LIKE $1
+        ORDER BY b.id LIMIT ${limit}
+    `, [`%${args.nombre.toLowerCase()}%`]);
+    return { count: r.rows.length, monumentos: r.rows };
+}
+
+async function toolBuscarPorTexto(args) {
+    const results = await buscarMonumentosRelevantes(args.texto, Math.min(args.limit || 8, 15));
+    return {
+        count: results.length,
+        monumentos: results.map(s => ({
+            id: s.bien_id, denominacion: s.denominacion, municipio: s.municipio,
+            provincia: s.provincia, pais: s.pais, tipo_monumento: s.tipo_monumento,
+            periodo: s.periodo, similarity: s.similarity?.toFixed(2),
+        })),
+    };
+}
+
+async function toolInfoMonumento(args) {
+    const id = parseInt(args.bien_id);
+    if (!id) return { error: 'bien_id inválido' };
+    const r = await db.query(`
+        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.tipo_monumento, b.periodo, b.latitud, b.longitud, b.heritage_world,
+               w.qid, w.descripcion AS wd_desc, w.arquitecto, w.estilo AS wd_estilo,
+               w.material, w.altura, w.superficie, w.inception, w.heritage_label,
+               w.religion, w.dedicado_a, w.parte_de, w.propietario, w.wikipedia_url
+        FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE b.id = $1
+    `, [id]);
+    if (r.rows.length === 0) return { error: 'Monumento no encontrado' };
+    const m = r.rows[0];
+
+    const wiki = await obtenerExtractoWiki(id, 'es');
+    if (wiki?.full_text) m.descripcion_wikipedia = wiki.full_text.substring(0, 2000);
+    else if (wiki?.extract) m.descripcion_wikipedia = wiki.extract;
+
+    const personas = await db.query(
+        `SELECT nombre, rol FROM bien_personas WHERE bien_id = $1`, [id]
+    );
+    if (personas.rows.length > 0) m.personas = personas.rows;
+
+    return m;
+}
+
+const TOOL_EXECUTORS = {
+    buscar_por_filtros: toolBuscarPorFiltros,
+    buscar_por_persona: toolBuscarPorPersona,
+    buscar_por_texto: toolBuscarPorTexto,
+    info_monumento: toolInfoMonumento,
+};
+
+async function llamarGroqRaw(messages, useTools = false) {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
-
-    const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo. Respondes basándote ÚNICAMENTE en el contexto proporcionado de la base de datos Patrimonio Europeo.
-
-Reglas:
-- Si la pregunta es sobre una PERSONA (autor, arquitecto, escultor, etc.), busca su nombre en el campo "Personas asociadas" de los monumentos del contexto. Si aparece, resume su obra basándote en los monumentos donde figura, mencionando ubicación, tipo y características.
-- Si la pregunta es sobre un MONUMENTO concreto, usa la descripción Wikipedia del contexto.
-- Si la pregunta es de RECOMENDACIÓN o BÚSQUEDA, lista los monumentos relevantes del contexto con una breve descripción de cada uno.
-- Si el contexto NO tiene info suficiente para responder, dilo claramente sin inventar.
-- Responde en el idioma de la pregunta del usuario.
-- Sé conciso (máx 4-5 párrafos).
-- Cita los monumentos con su #id cuando los menciones.`;
-
-    const userPrompt = `Pregunta: ${question}\n\nContexto disponible:\n${contexto}\n\nResponde basándote SOLO en el contexto anterior.`;
-
-    const t0 = Date.now();
+    const body = {
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        temperature: 0.3,
+        max_tokens: 800,
+    };
+    if (useTools) {
+        body.tools = CHAT_TOOLS;
+        body.tool_choice = 'auto';
+    }
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt },
-            ],
-            temperature: 0.3,
-            max_tokens: 700,
-        }),
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
     });
-
     if (!res.ok) {
         const errBody = await res.text();
-        throw new Error(`Groq ${res.status}: ${errBody.substring(0, 200)}`);
+        throw new Error(`Groq ${res.status}: ${errBody.substring(0, 300)}`);
     }
-    const data = await res.json();
+    return await res.json();
+}
+
+async function chatConToolUse(question) {
+    const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo, especializado en el catálogo "Patrimonio Europeo" (316k+ monumentos en España, Italia, Francia, Portugal).
+
+Tienes acceso a 4 funciones (tools) que puedes invocar para consultar la base de datos:
+- buscar_por_filtros: filtros estructurados (tipo, periodo, religión, ubicación, dedicatoria, UNESCO, etc.)
+- buscar_por_persona: arquitectos/escultores/autores
+- buscar_por_texto: búsqueda fuzzy por nombre de monumento
+- info_monumento: ficha completa de UN monumento por su id
+
+Reglas:
+- Analiza la pregunta del usuario y elige la herramienta más adecuada.
+- Puedes encadenar herramientas (ej: buscar por filtros → luego info de uno concreto).
+- Usa el español/catalán/lengua del usuario en la respuesta.
+- Cita SIEMPRE los monumentos con su #id (formato "#12345").
+- Sé conciso pero informativo. Máx 5 párrafos.
+- Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: question },
+    ];
+
+    const toolsUsed = [];
+    let totalTokensIn = 0, totalTokensOut = 0;
+    const allMonumentos = new Map();
+    const t0 = Date.now();
+
+    // Loop máx 3 iteraciones tool use
+    for (let iter = 0; iter < 3; iter++) {
+        const result = await llamarGroqRaw(messages, true);
+        totalTokensIn += result.usage?.prompt_tokens || 0;
+        totalTokensOut += result.usage?.completion_tokens || 0;
+        const msg = result.choices[0].message;
+        messages.push(msg);
+
+        if (!msg.tool_calls || msg.tool_calls.length === 0) {
+            // Respuesta final del LLM
+            return {
+                answer: msg.content || '',
+                tools_used: toolsUsed,
+                sources: Array.from(allMonumentos.values()).slice(0, 8),
+                meta: {
+                    model: result.model,
+                    tokens_in: totalTokensIn,
+                    tokens_out: totalTokensOut,
+                    elapsed_ms: Date.now() - t0,
+                    iterations: iter + 1,
+                },
+            };
+        }
+
+        // Ejecutar cada tool call
+        for (const call of msg.tool_calls) {
+            const fnName = call.function.name;
+            let args = {};
+            try { args = JSON.parse(call.function.arguments); } catch {}
+            const executor = TOOL_EXECUTORS[fnName];
+            let toolResult;
+            try {
+                if (!executor) toolResult = { error: `Tool ${fnName} desconocida` };
+                else toolResult = await executor(args);
+            } catch (e) {
+                toolResult = { error: e.message };
+            }
+            toolsUsed.push({ name: fnName, args, count: toolResult?.count, error: toolResult?.error });
+
+            // Acumular monumentos para "Fuentes" del UI
+            if (toolResult?.monumentos) {
+                for (const m of toolResult.monumentos.slice(0, 5)) {
+                    if (!allMonumentos.has(m.id)) {
+                        allMonumentos.set(m.id, {
+                            bien_id: m.id,
+                            denominacion: m.denominacion,
+                            municipio: m.municipio,
+                            similarity: m.similarity,
+                        });
+                    }
+                }
+            } else if (toolResult?.id && !allMonumentos.has(toolResult.id)) {
+                allMonumentos.set(toolResult.id, {
+                    bien_id: toolResult.id,
+                    denominacion: toolResult.denominacion,
+                    municipio: toolResult.municipio,
+                });
+            }
+
+            messages.push({
+                role: 'tool',
+                tool_call_id: call.id,
+                content: JSON.stringify(toolResult).substring(0, 6000),
+            });
+        }
+    }
+
+    // Si llegó al límite de iteraciones, forzar respuesta final sin tools
+    const finalResult = await llamarGroqRaw(messages, false);
+    totalTokensIn += finalResult.usage?.prompt_tokens || 0;
+    totalTokensOut += finalResult.usage?.completion_tokens || 0;
     return {
-        answer: data.choices[0]?.message?.content || '',
-        model: data.model,
-        tokens_in: data.usage?.prompt_tokens,
-        tokens_out: data.usage?.completion_tokens,
-        elapsed_ms: Date.now() - t0,
+        answer: finalResult.choices[0]?.message?.content || '(respuesta vacía tras 3 iteraciones)',
+        tools_used: toolsUsed,
+        sources: Array.from(allMonumentos.values()).slice(0, 8),
+        meta: {
+            model: finalResult.model,
+            tokens_in: totalTokensIn,
+            tokens_out: totalTokensOut,
+            elapsed_ms: Date.now() - t0,
+            iterations: 3,
+            forced_final: true,
+        },
     };
 }
 
@@ -1140,99 +1404,11 @@ app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) =>
         if (!question || question.trim().length < 3) {
             return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
         }
-        const t0 = Date.now();
-
-        // 1. Buscar monumentos relevantes
-        const sources = await buscarMonumentosRelevantes(question, 5);
-
-        if (sources.length === 0) {
-            return res.json({
-                answer: 'No he encontrado monumentos relacionados con esa pregunta en el catálogo. Prueba con palabras clave más específicas (nombre de monumento, municipio, periodo arquitectónico…).',
-                sources: [],
-                meta: { mode: 'no-matches', elapsed_ms: Date.now() - t0 },
-            });
-        }
-
-        // 2. Construir contexto enriquecido
-        const bienIds = sources.map(s => s.bien_id);
-
-        // Personas asociadas (architect, creator, etc.)
-        const personasRes = await db.query(`
-            SELECT bien_id, nombre, rol FROM bien_personas
-            WHERE bien_id = ANY($1::int[]) ORDER BY bien_id, rol
-        `, [bienIds]);
-        const personasByBien = {};
-        for (const r of personasRes.rows) {
-            if (!personasByBien[r.bien_id]) personasByBien[r.bien_id] = [];
-            personasByBien[r.bien_id].push(`${r.nombre} (${r.rol})`);
-        }
-
-        // Aliases + eventos
-        const extras = await obtenerAliasesYEventos(bienIds);
-
-        const ctxBlocks = [];
-        for (const s of sources) {
-            const wiki = await obtenerExtractoWiki(s.bien_id, 'es');
-            const fullText = wiki?.full_text || wiki?.extract || s.wd_desc || '';
-            const personas = personasByBien[s.bien_id];
-            const aliases = extras.aliases[s.bien_id];
-            const eventos = extras.eventos[s.bien_id];
-
-            const lines = [`[Monumento #${s.bien_id}] ${s.denominacion}`];
-            if (aliases?.length > 0) lines.push(`Nombres alternativos: ${aliases.slice(0, 8).join(' / ')}`);
-            lines.push(`Ubicación: ${[s.municipio, s.provincia, s.pais].filter(Boolean).join(', ')}` +
-                (s.latitud && s.longitud ? ` (coords ${s.latitud.toFixed(3)}, ${s.longitud.toFixed(3)})` : ''));
-            lines.push(`Tipo: ${s.tipo_monumento || 'N/A'} · Periodo: ${s.periodo || 'N/A'}` +
-                (s.wd_estilo ? ` · Estilo: ${s.wd_estilo}` : ''));
-            if (s.inception) lines.push(`Fecha de construcción/inicio: ${s.inception}`);
-            if (personas?.length > 0) lines.push(`Personas asociadas: ${personas.join(', ')}`);
-            else if (s.arquitecto) lines.push(`Arquitecto: ${s.arquitecto}`);
-            const fisicas = [];
-            if (s.material) fisicas.push(`material: ${s.material}`);
-            if (s.altura) fisicas.push(`altura: ${s.altura}m`);
-            if (s.superficie) fisicas.push(`superficie: ${s.superficie}m²`);
-            if (fisicas.length > 0) lines.push(`Características físicas: ${fisicas.join(' · ')}`);
-            const semantico = [];
-            if (s.religion) semantico.push(`religión: ${s.religion}`);
-            if (s.dedicado_a) semantico.push(`dedicado a: ${s.dedicado_a}`);
-            if (s.parte_de) semantico.push(`parte de: ${s.parte_de}`);
-            if (s.propietario) semantico.push(`propietario: ${s.propietario}`);
-            if (semantico.length > 0) lines.push(semantico.join(' · '));
-            const patrim = [];
-            if (s.heritage_world === 'unesco') patrim.push('UNESCO Patrimonio Mundial');
-            if (s.heritage_world === 'european') patrim.push('European Heritage Label');
-            if (s.heritage_label) patrim.push(s.heritage_label);
-            if (patrim.length > 0) lines.push(`Reconocimientos: ${patrim.join(' · ')}`);
-            if (eventos?.length > 0) lines.push(`Eventos históricos asociados: ${eventos.slice(0, 6).join(', ')}`);
-            if (fullText) lines.push(`Descripción Wikipedia: ${fullText.substring(0, 1500)}`);
-
-            ctxBlocks.push(lines.join('\n'));
-        }
-        const contexto = ctxBlocks.join('\n---\n');
-
-        // 3. Si no hay Groq key, devolver solo fuentes
         if (!process.env.GROQ_API_KEY) {
-            return res.json({
-                answer: 'Modo sin LLM (falta GROQ_API_KEY en Render). Te muestro los monumentos más relevantes a tu pregunta como fuentes — puedes consultarlos directamente.',
-                sources,
-                meta: { mode: 'no-llm', elapsed_ms: Date.now() - t0 },
-            });
+            return res.status(500).json({ error: 'GROQ_API_KEY no configurada en Render' });
         }
-
-        // 4. Llamar a Groq
-        const llm = await llamarGroq(question, contexto);
-
-        res.json({
-            answer: llm.answer,
-            sources,
-            meta: {
-                mode: 'rag-groq',
-                model: llm.model,
-                tokens_in: llm.tokens_in,
-                tokens_out: llm.tokens_out,
-                elapsed_ms: Date.now() - t0,
-            },
-        });
+        const result = await chatConToolUse(question);
+        res.json(result);
     } catch (err) {
         console.error('Chat error:', err);
         res.status(500).json({ error: err.message });
