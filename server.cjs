@@ -1296,28 +1296,51 @@ async function toolInfoMonumento(args) {
 }
 
 async function toolBuscarPorDescripcion(args) {
-    const palabras = extraerPalabrasClave(args.texto);
-    if (palabras.length === 0) return { error: 'Texto muy corto' };
+    const texto = (args.texto || '').trim();
+    if (texto.length < 3) return { error: 'Texto muy corto' };
     const limit = Math.min(args.limit || 10, 15);
 
-    // Búsqueda en wikipedia_extracts (BD enrichment ES). Si no responde, fallback a otros idiomas.
+    // Fase 1: buscar FRASE EXACTA en full_text (mucho más preciso para nombres compuestos)
+    const fraseLower = `%${texto.toLowerCase()}%`;
     const langs = ['es', 'ca', 'en', 'fr', 'it', 'pt'];
     const bienIds = new Set();
+
     for (const lang of langs) {
         if (bienIds.size >= limit) break;
         const pool = db.getEnrichmentPool(lang);
         if (!pool) continue;
         try {
-            const ilikeConds = palabras.map((_, i) => `(LOWER(full_text) LIKE $${i + 1} OR LOWER(extract) LIKE $${i + 1})`).join(' AND ');
-            const params = palabras.map(p => `%${p.toLowerCase()}%`);
             const r = await pool.query(`
                 SELECT bien_id FROM wikipedia_extracts
-                WHERE ${ilikeConds}
+                WHERE LOWER(full_text) LIKE $1 OR LOWER(extract) LIKE $1
                 LIMIT ${limit}
-            `, params);
+            `, [fraseLower]);
             r.rows.forEach(row => bienIds.add(row.bien_id));
-        } catch (e) { console.error(`enrich ${lang}:`, e.message); }
+        } catch (e) { console.error(`enrich ${lang} frase:`, e.message); }
     }
+
+    // Fase 2: si la frase exacta no devuelve nada, fallback a AND de palabras
+    if (bienIds.size === 0) {
+        const palabras = extraerPalabrasClave(texto);
+        if (palabras.length >= 1) {
+            for (const lang of langs) {
+                if (bienIds.size >= limit) break;
+                const pool = db.getEnrichmentPool(lang);
+                if (!pool) continue;
+                try {
+                    const ilikeConds = palabras.map((_, i) => `(LOWER(full_text) LIKE $${i + 1} OR LOWER(extract) LIKE $${i + 1})`).join(' AND ');
+                    const params = palabras.map(p => `%${p.toLowerCase()}%`);
+                    const r = await pool.query(`
+                        SELECT bien_id FROM wikipedia_extracts
+                        WHERE ${ilikeConds}
+                        LIMIT ${limit}
+                    `, params);
+                    r.rows.forEach(row => bienIds.add(row.bien_id));
+                } catch (e) { console.error(`enrich ${lang} AND:`, e.message); }
+            }
+        }
+    }
+
     if (bienIds.size === 0) return { count: 0, monumentos: [] };
 
     const ids = Array.from(bienIds);
@@ -1417,7 +1440,9 @@ REGLAS CRÍTICAS:
 
 4. **Cita SIEMPRE los monumentos con #id** (formato "#12345"). Sé conciso, máx 5 párrafos.
 
-5. Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
+5. **PROHIBIDO INVENTAR**: NO menciones rutas, monumentos, autores o ids que no hayan aparecido en los resultados de tus herramientas. Si una tool devuelve count=0, NO inventes resultados. Si no encuentras nada, dilo claramente: "no he encontrado X en el catálogo".
+
+6. Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
