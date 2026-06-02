@@ -1012,7 +1012,16 @@ async function llamarGroq(question, contexto) {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
 
-    const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo. Respondes basándote ÚNICAMENTE en el contexto proporcionado de la base de datos Patrimonio Europeo. Si el contexto no tiene la información, dilo claramente. Responde en el idioma de la pregunta del usuario. Sé conciso (máx 4-5 párrafos). Cita los monumentos con su #id cuando los menciones.`;
+    const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo. Respondes basándote ÚNICAMENTE en el contexto proporcionado de la base de datos Patrimonio Europeo.
+
+Reglas:
+- Si la pregunta es sobre una PERSONA (autor, arquitecto, escultor, etc.), busca su nombre en el campo "Personas asociadas" de los monumentos del contexto. Si aparece, resume su obra basándote en los monumentos donde figura, mencionando ubicación, tipo y características.
+- Si la pregunta es sobre un MONUMENTO concreto, usa la descripción Wikipedia del contexto.
+- Si la pregunta es de RECOMENDACIÓN o BÚSQUEDA, lista los monumentos relevantes del contexto con una breve descripción de cada uno.
+- Si el contexto NO tiene info suficiente para responder, dilo claramente sin inventar.
+- Responde en el idioma de la pregunta del usuario.
+- Sé conciso (máx 4-5 párrafos).
+- Cita los monumentos con su #id cuando los menciones.`;
 
     const userPrompt = `Pregunta: ${question}\n\nContexto disponible:\n${contexto}\n\nResponde basándote SOLO en el contexto anterior.`;
 
@@ -1067,16 +1076,30 @@ app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) =>
             });
         }
 
-        // 2. Construir contexto con extractos Wikipedia
+        // 2. Construir contexto con extractos Wikipedia + personas asociadas
+        const bienIds = sources.map(s => s.bien_id);
+        const personasRes = await db.query(`
+            SELECT bien_id, nombre, rol FROM bien_personas
+            WHERE bien_id = ANY($1::int[])
+            ORDER BY bien_id, rol
+        `, [bienIds]);
+        const personasByBien = {};
+        for (const row of personasRes.rows) {
+            if (!personasByBien[row.bien_id]) personasByBien[row.bien_id] = [];
+            personasByBien[row.bien_id].push(`${row.nombre} (${row.rol})`);
+        }
+
         const ctxBlocks = [];
         for (const s of sources) {
             const wiki = await obtenerExtractoWiki(s.bien_id, 'es');
-            const desc = wiki?.extract || s.wd_desc || '(sin descripción)';
+            const fullText = wiki?.full_text || wiki?.extract || s.wd_desc || '(sin descripción)';
+            const personas = personasByBien[s.bien_id];
             ctxBlocks.push(
                 `[Monumento #${s.bien_id}] ${s.denominacion}\n` +
                 `Ubicación: ${[s.municipio, s.provincia, s.pais].filter(Boolean).join(', ')}\n` +
                 `Tipo: ${s.tipo_monumento || 'N/A'} · Periodo: ${s.periodo || 'N/A'}\n` +
-                `Descripción: ${desc.substring(0, 600)}\n`
+                (personas ? `Personas asociadas: ${personas.join(', ')}\n` : '') +
+                `Descripción: ${fullText.substring(0, 1500)}\n`
             );
         }
         const contexto = ctxBlocks.join('\n---\n');
