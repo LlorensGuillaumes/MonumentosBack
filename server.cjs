@@ -2042,11 +2042,29 @@ app.get('/api/monumentos', async (req, res) => {
             where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
         }
         if (req.query.q) {
-            // Tokenize by whitespace and join with % so "castillo olite" matches "Castillo de Olite"
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
-                params.push(`%${qTokenized}%`);
+                // Buscar también en bien_aliases (BD search) para nombres alternativos
+                let aliasBienIds = [];
+                const searchPool = db.getSearchPool && db.getSearchPool();
+                if (searchPool) {
+                    try {
+                        const r = await searchPool.query(
+                            `SELECT DISTINCT bien_id FROM bien_aliases
+                             WHERE unaccent(LOWER(alias)) ILIKE unaccent(LOWER($1)) LIMIT 200`,
+                            [`%${qTokenized}%`]
+                        );
+                        aliasBienIds = r.rows.map(x => x.bien_id);
+                    } catch (e) { console.error('alias search:', e.message); }
+                }
+                if (aliasBienIds.length > 0) {
+                    where.push(`(unaccent(b.denominacion) ILIKE unaccent($${pi}) OR b.id = ANY($${pi + 1}::int[]))`);
+                    params.push(`%${qTokenized}%`, aliasBienIds);
+                    pi += 2;
+                } else {
+                    where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                    params.push(`%${qTokenized}%`);
+                }
             }
         }
         if (req.query.solo_coords === 'true') {
@@ -2374,11 +2392,29 @@ app.get('/api/geojson', async (req, res) => {
             where.push('EXISTS (SELECT 1 FROM eventos_monumento em WHERE em.bien_id = b.id)');
         }
         if (req.query.q) {
-            // Tokenize by whitespace and join with % so "castillo olite" matches "Castillo de Olite"
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
-                params.push(`%${qTokenized}%`);
+                // Buscar también en bien_aliases (BD search) para nombres alternativos
+                let aliasBienIds = [];
+                const searchPool = db.getSearchPool && db.getSearchPool();
+                if (searchPool) {
+                    try {
+                        const r = await searchPool.query(
+                            `SELECT DISTINCT bien_id FROM bien_aliases
+                             WHERE unaccent(LOWER(alias)) ILIKE unaccent(LOWER($1)) LIMIT 200`,
+                            [`%${qTokenized}%`]
+                        );
+                        aliasBienIds = r.rows.map(x => x.bien_id);
+                    } catch (e) { console.error('alias search:', e.message); }
+                }
+                if (aliasBienIds.length > 0) {
+                    where.push(`(unaccent(b.denominacion) ILIKE unaccent($${pi}) OR b.id = ANY($${pi + 1}::int[]))`);
+                    params.push(`%${qTokenized}%`, aliasBienIds);
+                    pi += 2;
+                } else {
+                    where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                    params.push(`%${qTokenized}%`);
+                }
             }
         }
         if (req.query.solo_coords === 'true') {
