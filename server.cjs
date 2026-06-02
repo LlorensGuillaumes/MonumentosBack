@@ -1167,6 +1167,36 @@ const CHAT_TOOLS = [
             },
         },
     },
+    {
+        type: 'function',
+        function: {
+            name: 'buscar_por_descripcion',
+            description: 'Busca monumentos cuyo TEXTO Wikipedia menciona ciertos conceptos. Imprescindible para comarcas catalanas (Conca de Barberà, Penedès, Empordà), referencias históricas, contexto geográfico ampliado, o palabras clave que NO aparecen en el nombre del monumento. Ej: "Conca de Barberà", "ruta del Cister", "época visigoda".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    texto: { type: 'string', description: 'Palabras o frase a buscar en la descripción Wikipedia' },
+                    limit: { type: 'integer', default: 10 },
+                },
+                required: ['texto'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'buscar_rutas',
+            description: 'Busca rutas culturales temáticas curadas (Camino de Santiago, Ruta del Cister, Ruta de Don Quijote, etc.). Usa cuando el usuario pida una ruta, itinerario, o sugieras una visita por zona.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    texto: { type: 'string', description: 'Nombre, tema o región de la ruta (ej: Cister, Santiago, Cataluña)' },
+                    limit: { type: 'integer', default: 8 },
+                },
+                required: ['texto'],
+            },
+        },
+    },
 ];
 
 // Ejecutores de tools
@@ -1263,11 +1293,72 @@ async function toolInfoMonumento(args) {
     return m;
 }
 
+async function toolBuscarPorDescripcion(args) {
+    const palabras = extraerPalabrasClave(args.texto);
+    if (palabras.length === 0) return { error: 'Texto muy corto' };
+    const limit = Math.min(args.limit || 10, 15);
+
+    // Búsqueda en wikipedia_extracts (BD enrichment ES). Si no responde, fallback a otros idiomas.
+    const langs = ['es', 'ca', 'en', 'fr', 'it', 'pt'];
+    const bienIds = new Set();
+    for (const lang of langs) {
+        if (bienIds.size >= limit) break;
+        const pool = db.getEnrichmentPool(lang);
+        if (!pool) continue;
+        try {
+            const ilikeConds = palabras.map((_, i) => `(LOWER(full_text) LIKE $${i + 1} OR LOWER(extract) LIKE $${i + 1})`).join(' AND ');
+            const params = palabras.map(p => `%${p.toLowerCase()}%`);
+            const r = await pool.query(`
+                SELECT bien_id FROM wikipedia_extracts
+                WHERE ${ilikeConds}
+                LIMIT ${limit}
+            `, params);
+            r.rows.forEach(row => bienIds.add(row.bien_id));
+        } catch (e) { console.error(`enrich ${lang}:`, e.message); }
+    }
+    if (bienIds.size === 0) return { count: 0, monumentos: [] };
+
+    const ids = Array.from(bienIds);
+    const r = await db.query(`
+        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+               b.tipo_monumento, b.periodo, w.estilo, w.inception
+        FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE b.id = ANY($1::int[]) LIMIT ${limit}
+    `, [ids]);
+    return { count: r.rows.length, monumentos: r.rows };
+}
+
+async function toolBuscarRutas(args) {
+    const palabras = extraerPalabrasClave(args.texto);
+    const limit = Math.min(args.limit || 8, 12);
+    if (palabras.length === 0) {
+        const r = await db.query(`SELECT id, slug, nombre, descripcion, region, pais, tema, num_paradas FROM rutas_culturales WHERE activa = true LIMIT ${limit}`);
+        return { count: r.rows.length, rutas: r.rows };
+    }
+    const conds = palabras.map((_, i) => `(LOWER(nombre) LIKE $${i + 1} OR LOWER(descripcion) LIKE $${i + 1} OR LOWER(region) LIKE $${i + 1} OR LOWER(tema) LIKE $${i + 1})`).join(' OR ');
+    const params = palabras.map(p => `%${p.toLowerCase()}%`);
+    const r = await db.query(`
+        SELECT id, slug, nombre, descripcion, region, pais, tema, num_paradas
+        FROM rutas_culturales WHERE (${conds}) AND activa = true
+        ORDER BY num_paradas DESC NULLS LAST
+        LIMIT ${limit}
+    `, params);
+    return {
+        count: r.rows.length,
+        rutas: r.rows.map(r => ({
+            ...r,
+            descripcion: r.descripcion ? r.descripcion.substring(0, 300) : null,
+        })),
+    };
+}
+
 const TOOL_EXECUTORS = {
     buscar_por_filtros: toolBuscarPorFiltros,
     buscar_por_persona: toolBuscarPorPersona,
     buscar_por_texto: toolBuscarPorTexto,
     info_monumento: toolInfoMonumento,
+    buscar_por_descripcion: toolBuscarPorDescripcion,
+    buscar_rutas: toolBuscarRutas,
 };
 
 async function llamarGroqRaw(messages, useTools = false) {
@@ -1298,10 +1389,12 @@ async function llamarGroqRaw(messages, useTools = false) {
 async function chatConToolUse(question) {
     const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo, especializado en el catálogo "Patrimonio Europeo" (316k+ monumentos en España, Italia, Francia, Portugal).
 
-Tienes acceso a 4 funciones (tools) que puedes invocar para consultar la base de datos:
+Tienes acceso a 6 funciones (tools) que puedes invocar para consultar la base de datos:
 - buscar_por_filtros: filtros estructurados (tipo, periodo, religión, ubicación, dedicatoria, UNESCO, etc.)
 - buscar_por_persona: arquitectos/escultores/autores (P84 architect, P170 creator, etc.)
 - buscar_por_texto: búsqueda fuzzy por nombre o ubicación (incluye municipio/provincia/comarca)
+- buscar_por_descripcion: busca en el TEXTO Wikipedia. ÚSALA para comarcas catalanas (Conca de Barberà, Penedès, Empordà, Garrotxa, etc.) o conceptos no estructurados que no están en denominación ni filtros.
+- buscar_rutas: rutas culturales temáticas (Camino Santiago, Ruta del Cister, etc.). Úsala cuando el usuario pida rutas/itinerarios o cuando sugieras visitas por zona.
 - info_monumento: ficha completa de UN monumento por su id
 
 REGLAS CRÍTICAS:
@@ -1315,7 +1408,10 @@ REGLAS CRÍTICAS:
 
 2. **Cuando el usuario describe vagamente algo**: usa buscar_por_texto incluyendo palabras de tipo + ubicación juntas. Ej: "monasterio en el Penedès" → buscar_por_texto({texto: "monasterio Penedès"}) — la función busca en denominación Y municipio/comarca.
 
-3. **Combina tools cuando ayude**: filtros amplios primero → si el usuario pide profundizar en uno, usa info_monumento(bien_id).
+3. **Combina tools cuando ayude**:
+   - Filtros amplios primero → si el usuario pide profundizar en uno, usa info_monumento(bien_id).
+   - Si el usuario menciona una COMARCA catalana (Conca de Barberà, Penedès, Empordà, Selva, Garrotxa, Ribera d'Ebre, etc.), usa SIEMPRE buscar_por_descripcion porque el campo "comarca" está vacío en BD.
+   - Si el usuario quiere viajar a una zona o pide recomendaciones por área, SUGIERE TAMBIÉN una ruta cultural cercana llamando a buscar_rutas con el nombre de la región o zona (ej: "Montblanc" → buscar_rutas("Cataluña Cister") puede aportar la Ruta del Cister cercana).
 
 4. **Cita SIEMPRE los monumentos con #id** (formato "#12345"). Sé conciso, máx 5 párrafos.
 
