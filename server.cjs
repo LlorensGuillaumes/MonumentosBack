@@ -1108,6 +1108,7 @@ const CHAT_TOOLS = [
                     pais: { type: 'string', description: 'País: España, Italia, Francia, Portugal' },
                     region: { type: 'string', description: 'Comunidad autónoma o región (Cataluña, Aragón, Andalucía, Toscana, etc.)' },
                     provincia: { type: 'string' },
+                    comarca: { type: 'string', description: 'Comarca (en Cataluña: Alt Penedès, Conca de Barberà, Garrotxa, Empordà, Selva, etc.). Solo disponible en Cataluña por ahora.' },
                     municipio: { type: 'string' },
                     tipo_monumento: { type: 'string', description: 'Tipo exacto: Castillo / Fortaleza, Iglesia / Ermita, Catedral, Monasterio / Convento, Palacio, Casa señorial / Mansión, Yacimiento arqueológico, Megalítico, Torre, Muralla, Puente, Acueducto, Faro, Molino, Cruz / Crucero, etc.' },
                     periodo: { type: 'string', description: 'Periodo: Prehistoria, Antiguo / Romano, Prerrománico, Románico, Gótico, Mudéjar, Mozárabe, Renacimiento, Barroco, Neoclásico, Modernismo, Contemporáneo' },
@@ -1212,6 +1213,7 @@ async function toolBuscarPorFiltros(args) {
     add('b.pais', args.pais);
     add('b.comunidad_autonoma', args.region, 'LIKE');
     add('b.provincia', args.provincia, 'LIKE');
+    add('b.comarca', args.comarca, 'LIKE');
     add('b.municipio', args.municipio, 'LIKE');
     add('b.tipo_monumento', args.tipo_monumento);
     add('b.periodo', args.periodo);
