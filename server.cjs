@@ -1640,11 +1640,16 @@ async function llamarGroqRaw(messages, useTools = false) {
         model: process.env.CHAT_MODEL || cfg.model,
         messages,
         temperature: 0.3,
-        max_tokens: 800,
+        max_tokens: 1200,
     };
     if (useTools) {
         body.tools = CHAT_TOOLS;
         body.tool_choice = 'auto';
+    } else {
+        // Forced-final (sin tools): obligamos al modelo a generar texto y no
+        // intentar otro tool_call. Importante para gpt-oss y otros reasoning
+        // que tienden a quedarse en bucles de tool calling.
+        body.tool_choice = 'none';
     }
     const res = await fetch(cfg.url, {
         method: 'POST',
@@ -1742,8 +1747,8 @@ REGLAS CRÍTICAS:
     const allMonumentos = new Map();
     const t0 = Date.now();
 
-    // Loop máx 3 iteraciones tool use
-    for (let iter = 0; iter < 3; iter++) {
+    // Loop máx 5 iteraciones tool use (gpt-oss tiende a llamar más tools)
+    for (let iter = 0; iter < 5; iter++) {
         const result = await llamarGroqRaw(messages, true);
         totalTokensIn += result.usage?.prompt_tokens || 0;
         totalTokensOut += result.usage?.completion_tokens || 0;
@@ -1829,7 +1834,7 @@ REGLAS CRÍTICAS:
             tokens_in: totalTokensIn,
             tokens_out: totalTokensOut,
             elapsed_ms: Date.now() - t0,
-            iterations: 3,
+            iterations: 5,
             forced_final: true,
         },
     };
