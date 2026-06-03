@@ -1580,10 +1580,21 @@ async function toolBuscarCercanos(args) {
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
+    // Particiona el resultado en "ciudad_base" (<15km) y "alrededores" (>=15km)
+    // para que el LLM vea estructuralmente que tiene que diversificar geográficamente.
+    const ciudad = [];
+    const alrededores = [];
+    for (const row of r.rows) {
+        if (parseFloat(row.dist_km) < 15) ciudad.push(row);
+        else alrededores.push(row);
+    }
     return {
         centro_resuelto: { lat: centro.lat.toFixed(4), lon: centro.lon.toFixed(4), fuente: centro.fuente },
         radio_km: radioKm,
         count: r.rows.length,
+        ciudad_base: ciudad.slice(0, 8),
+        alrededores: alrededores,
+        // Compatibilidad: campo plano por si el LLM lo pide
         monumentos: r.rows,
     };
 }
@@ -1670,11 +1681,11 @@ REGLAS CRÍTICAS:
       - semana en coche: 120-150 km
    b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
    c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. Reglas estrictas:
-      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si solo encuentras 1 monumento para un día, fusiona ese día con el anterior o el siguiente, NO inventes un día de un solo monumento.
-      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas/zonas que aparezcan en los resultados de las tools. NUNCA inventes direcciones cardinales ("Norte de", "Sur de"…). Si dudas, usa solo los nombres de los municipios visitados (ej: "Día 2 — Calatayud, Tobed y Cervera de la Cañada").
-      - Prioriza UNESCO, catedrales, castillos, monasterios, conjuntos históricos y sitios famosos por encima de fosas, yacimientos sin contexto o museos menores.
-      - NO uses un día entero solo para "consultar rutas" ni para "regresar a la ciudad base". Esos no son días de visita real.
-      - Si la tool buscar_cercanos_a devolvió Loarre/Piedra/Albarracín/Veruela/Sos del Rey Católico/San Juan de la Peña/Tarazona/Fuendetodos/Daroca u otros hitos clásicos aragoneses, MENCIÓNALOS — son los más turísticos.
+      - **MÁXIMO 2 DÍAS EN LA CIUDAD-BASE**. La tool buscar_cercanos_a devuelve un campo "ciudad_base" (sitios a menos de 15km del centro) y un campo "alrededores" (sitios a 15km o más). Usa "ciudad_base" para los 1-2 primeros días. Los demás días DEBEN venir de "alrededores", agrupados por municipios/comarcas próximas entre sí.
+      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si solo hay 1 para un día, fusiónalo con otro.
+      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas (ej: "Día 3 — Huesca y Castillo de Loarre"). NUNCA direcciones cardinales inventadas.
+      - Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. La lista que recibes ya está ordenada por importancia (UNESCO + nº idiomas Wikipedia + tipo).
+      - NO gastes un día entero "consultando rutas" ni "regresando a base". Esos no cuentan.
 
    Formato:
 
