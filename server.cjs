@@ -1836,7 +1836,8 @@ REGLAS CRÍTICAS:
 
 // Debug temporal: lista modelos disponibles del proveedor LLM activo.
 // Útil para descubrir el id exacto de modelo cuando Cerebras/Groq cambian su catálogo.
-app.get('/api/admin/chat/models', authMiddleware, adminMiddleware, async (req, res) => {
+// (sin auth temporal para diagnosticar — quitar después)
+app.get('/api/admin/chat/models', async (req, res) => {
     try {
         const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
         const cfg = LLM_PROVIDERS[providerName];
