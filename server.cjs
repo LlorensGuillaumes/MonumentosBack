@@ -43,6 +43,7 @@ const JWT_EXPIRES_IN = '30d';
 // CORS whitelist
 const ALLOWED_ORIGINS = [
     'https://patrimonio-europeo.netlify.app',
+    'https://patrimonio-europeo-v2.netlify.app',
     'https://shiny-licorice-a01ea4.netlify.app',
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []),
 ];
