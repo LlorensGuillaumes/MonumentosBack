@@ -1770,10 +1770,13 @@ function geminiToOpenAI(data, model) {
     };
 }
 
-async function llamarGroqRaw(messages, useTools = false) {
-    const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
+// Cadena de fallback cuando el primary devuelve 429/503: pruebamos siguientes
+// providers en orden, siempre que tengan API key configurada en Render.
+const FALLBACK_CHAIN = ['gemini', 'groq', 'cerebras'];
+
+async function llamarUnProvider(providerName, messages, useTools) {
     const cfg = LLM_PROVIDERS[providerName];
-    if (!cfg) throw new Error(`CHAT_PROVIDER desconocido: ${providerName}`);
+    if (!cfg) throw new Error(`Provider desconocido: ${providerName}`);
     const apiKey = process.env[cfg.envKey];
     if (!apiKey) throw new Error(`${cfg.envKey} no configurada`);
     const model = process.env.CHAT_MODEL || cfg.model;
@@ -1812,6 +1815,33 @@ async function llamarGroqRaw(messages, useTools = false) {
         throw new Error(`${providerName} ${res.status}: ${errBody.substring(0, 300)}`);
     }
     return await res.json();
+}
+
+async function llamarGroqRaw(messages, useTools = false) {
+    const primary = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
+    // Orden: primary primero, luego el resto de la cadena (sin repetir el primary).
+    const tryOrder = [primary, ...FALLBACK_CHAIN.filter(p => p !== primary)];
+    let lastErr;
+    for (const providerName of tryOrder) {
+        const cfg = LLM_PROVIDERS[providerName];
+        if (!cfg) continue;
+        if (!process.env[cfg.envKey]) continue; // sin API key → saltar
+        try {
+            const result = await llamarUnProvider(providerName, messages, useTools);
+            if (providerName !== primary) {
+                console.warn(`Chat: fallback OK con ${providerName} tras fallo de ${primary}`);
+            }
+            return result;
+        } catch (err) {
+            const msg = err.message || '';
+            // Solo fallback en cuota/rate (429), disponibilidad (503) o 500/502/504.
+            // Errores 4xx distintos (400 bad request, 401 auth) NO disparan fallback.
+            if (!/(\b429\b|\b503\b|\b502\b|\b504\b|\b500\b)/.test(msg)) throw err;
+            console.warn(`Chat: ${providerName} falló (${msg.slice(0, 120)}), probando siguiente...`);
+            lastErr = err;
+        }
+    }
+    throw lastErr || new Error('Todos los providers fallaron o no hay ninguno configurado');
 }
 
 function rankearFuentes(allMonumentos, answerText) {
