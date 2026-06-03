@@ -1834,7 +1834,7 @@ function rankearFuentes(allMonumentos, answerText) {
     return arr.slice(0, 8).map(({ _score, ...rest }) => rest);
 }
 
-async function chatConToolUse(question, modoUsuario = 'mixto') {
+async function chatConToolUse(question, modoUsuario = 'descubre') {
     const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo, especializado en el catálogo "Patrimonio Europeo" (316k+ monumentos en España, Italia, Francia, Portugal).
 
 Tienes acceso a 7 funciones (tools) que puedes invocar para consultar la base de datos:
@@ -1855,10 +1855,9 @@ REGLAS CRÍTICAS:
    - Responde al usuario en su mismo idioma.
 
 2. **VIAJES Y VISITAS (regla principal — OBLIGATORIA)**: si el usuario menciona estancia con base + duración + transporte (ej: "estaré una semana en Zaragoza en coche", "fin de semana en Toledo", "tres días por Cádiz"), TIENES QUE:
-   a) Llamar OBLIGATORIAMENTE a buscar_cercanos_a({centro: "ciudad_base", radio_km: X, limit: 15}) — NUNCA buscar_por_texto sola en estos casos. Radio según duración:
-      - día/escapada corta: 50 km
-      - fin de semana: 80-100 km
-      - semana en coche: 120-150 km
+   a) Llamar OBLIGATORIAMENTE a buscar_cercanos_a({centro: "ciudad_base", radio_km: X, modo: "${modoUsuario}", limit: 15}) — NUNCA buscar_por_texto sola en estos casos. Radio depende del MODO + duración:
+      - **modo imprescindibles/mixto** (visitar lo famoso): día 50 km, fin de semana 80-100 km, semana en coche 120-150 km.
+      - **modo descubre** (joyas locales en la zona): día 20-30 km, fin de semana 40-50 km, semana 60-80 km. La idea es profundizar en una zona pequeña, NO recorrer media Cataluña.
    b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
    c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. Reglas estrictas:
       - **MÁXIMO 2 DÍAS EN LA CIUDAD-BASE**. La tool buscar_cercanos_a devuelve "ciudad_base" (sitios a <15km) y "alrededores_por_zona" (array de zonas agrupadas por provincia, cada zona con sus monumentos). Usa "ciudad_base" para los 1-2 primeros días. Los demás días los sacas de "alrededores_por_zona": idealmente UNA zona por día.
@@ -2032,7 +2031,7 @@ app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) =>
         if (!question || question.trim().length < 3) {
             return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
         }
-        const modoSan = ['imprescindibles', 'mixto', 'descubre'].includes(modo) ? modo : 'mixto';
+        const modoSan = ['imprescindibles', 'mixto', 'descubre'].includes(modo) ? modo : 'descubre';
         const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
         const expectedKey = LLM_PROVIDERS[providerName]?.envKey || 'GROQ_API_KEY';
         if (!process.env[expectedKey]) {
