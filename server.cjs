@@ -1500,8 +1500,8 @@ async function resolverCentroCoords(centro) {
 async function toolBuscarCercanos(args) {
     const centro = await resolverCentroCoords(args.centro);
     if (!centro) return { error: `No localizo "${args.centro}". Prueba con un municipio más concreto.` };
-    const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 100, 250));
-    const limit = Math.max(3, Math.min(parseInt(args.limit) || 20, 30));
+    const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 150, 300));
+    const limit = Math.max(3, Math.min(parseInt(args.limit) || 25, 30));
 
     const where = [
         `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
@@ -1538,26 +1538,24 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
-                   -- Bias combinado: prioriza tipos "estrella" (Catedral, Monasterio,
-                   -- Castillo, Palacio, Conjunto histórico) sobre cosas residenciales,
-                   -- presas, canales, puentes etc. Eso saca a Loarre/Piedra/Veruela
-                   -- por encima de "Edificio de viviendas calle Almagro 5".
+                   COALESCE(w.wiki_lang_count, 0) AS wiki_langs,
+                   -- Bias por popularidad real: número de idiomas Wikipedia (proxy
+                   -- de fama). Loarre/Aljafería ~7 idiomas → bias 0, Castillo
+                   -- de Erla 1 idioma → cae fuera del filtro.
                    (CASE
                         WHEN b.heritage_world IS NOT NULL THEN 0
-                        WHEN b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') AND w.wikipedia_url IS NOT NULL THEN 1
-                        WHEN b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') AND w.heritage_label IS NOT NULL THEN 2
-                        WHEN w.heritage_label IS NOT NULL AND w.wikipedia_url IS NOT NULL THEN 3
-                        WHEN w.heritage_label IS NOT NULL THEN 4
-                        WHEN w.wikipedia_url IS NOT NULL THEN 5
-                        ELSE 6
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 0
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 1
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 2
+                        ELSE 99
                     END) AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
         ),
         filtrado AS (
-            -- En modo turístico (solo_estrella), solo UNESCO + tipos top (Catedral,
-            -- Monasterio, Castillo, Palacio, Conjunto histórico). Eso descarta
-            -- edificios civiles, presas, ermitas menores, fosas y todo el ruido.
+            -- Modo turístico: UNESCO + ≥4 idiomas (cualquier tipo) + ≥2 idiomas
+            -- (tipos top). Esto elimina los castillos menores con 1 idioma o
+            -- ninguno (Erla, Almudevar, Agón...) que solo tienen heritage_label.
             SELECT * FROM cand
             ${solo ? 'WHERE bias <= 2' : ''}
         ),
@@ -1574,9 +1572,10 @@ async function toolBuscarCercanos(args) {
             FROM filtrado
         )
         SELECT id, denominacion, municipio, provincia, comunidad_autonoma,
-               tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url, dist_km
+               tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url,
+               wiki_langs, dist_km
         FROM diverso
-        WHERE rk_banda <= 2
+        WHERE rk_banda <= 3
         ORDER BY ${solo ? '(bias * 15 + dist_km)' : 'dist_km'}
         LIMIT ${limit}
     `;
