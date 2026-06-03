@@ -1501,7 +1501,7 @@ async function toolBuscarCercanos(args) {
     const centro = await resolverCentroCoords(args.centro);
     if (!centro) return { error: `No localizo "${args.centro}". Prueba con un municipio más concreto.` };
     const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 100, 250));
-    const limit = Math.max(3, Math.min(parseInt(args.limit) || 18, 25));
+    const limit = Math.max(3, Math.min(parseInt(args.limit) || 20, 30));
 
     const where = [
         `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
@@ -1525,8 +1525,10 @@ async function toolBuscarCercanos(args) {
                   ELSE 3 END),`
         : '';
 
-    // Diversidad: máx 2 bienes por municipio para no saturar con la ciudad-base.
-    // Ranking interno: importancia primero, luego distancia.
+    // Diversidad por banda de distancia (20 km cada una) para no saturar con la
+    // ciudad-base. Cada banda devuelve hasta 3 candidatos ordenados por importancia.
+    // Así Loarre (78km), Piedra (90km), Veruela (62km), San Juan de la Peña (96km),
+    // Albarracín (145km) sí llegan al top en sus respectivas bandas.
     const sql = `
         WITH cand AS (
             SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comunidad_autonoma,
@@ -1536,26 +1538,46 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
-                   (CASE WHEN b.heritage_world IS NOT NULL THEN 0
-                         WHEN w.heritage_label IS NOT NULL THEN 1
-                         WHEN w.wikipedia_url IS NOT NULL THEN 2
-                         ELSE 3 END) AS bias,
-                   ROW_NUMBER() OVER (
-                       PARTITION BY COALESCE(b.municipio, b.denominacion)
-                       ORDER BY (CASE WHEN b.heritage_world IS NOT NULL THEN 0
-                                      WHEN w.heritage_label IS NOT NULL THEN 1
-                                      WHEN w.wikipedia_url IS NOT NULL THEN 2
-                                      ELSE 3 END),
-                                b.id
-                   ) AS rk_muni
+                   -- Bias combinado: prioriza tipos "estrella" (Catedral, Monasterio,
+                   -- Castillo, Palacio, Conjunto histórico) sobre cosas residenciales,
+                   -- presas, canales, puentes etc. Eso saca a Loarre/Piedra/Veruela
+                   -- por encima de "Edificio de viviendas calle Almagro 5".
+                   (CASE
+                        WHEN b.heritage_world IS NOT NULL THEN 0
+                        WHEN b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') AND w.wikipedia_url IS NOT NULL THEN 1
+                        WHEN b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') AND w.heritage_label IS NOT NULL THEN 2
+                        WHEN w.heritage_label IS NOT NULL AND w.wikipedia_url IS NOT NULL THEN 3
+                        WHEN w.heritage_label IS NOT NULL THEN 4
+                        WHEN w.wikipedia_url IS NOT NULL THEN 5
+                        ELSE 6
+                    END) AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
+        ),
+        filtrado AS (
+            -- En modo turístico (solo_estrella), solo UNESCO + tipos top (Catedral,
+            -- Monasterio, Castillo, Palacio, Conjunto histórico). Eso descarta
+            -- edificios civiles, presas, ermitas menores, fosas y todo el ruido.
+            SELECT * FROM cand
+            ${solo ? 'WHERE bias <= 2' : ''}
+        ),
+        diverso AS (
+            SELECT *,
+                   -- Diversidad por (banda 25km, provincia, bias). Garantiza que
+                   -- dentro de cada banda+provincia haya hasta 2 UNESCO y 2 BIC
+                   -- + wiki. Así una banda saturada por sites UNESCO Mudéjar no
+                   -- excluye Veruela/Piedra/Loarre (BIC famosos).
+                   ROW_NUMBER() OVER (
+                       PARTITION BY FLOOR(dist_km / 25), provincia, bias
+                       ORDER BY dist_km
+                   ) AS rk_banda
+            FROM filtrado
         )
         SELECT id, denominacion, municipio, provincia, comunidad_autonoma,
                tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url, dist_km
-        FROM cand
-        WHERE rk_muni <= 2
-        ORDER BY ${solo ? '(bias * 25 + dist_km)' : 'dist_km'}
+        FROM diverso
+        WHERE rk_banda <= 2
+        ORDER BY ${solo ? '(bias * 15 + dist_km)' : 'dist_km'}
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
