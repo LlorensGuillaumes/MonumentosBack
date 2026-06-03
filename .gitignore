@@ -30,3 +30,22 @@ Users*
 # Markdown notes
 *.md
 !README.md
+
+# Data dumps generados por scripts (artefactos transitorios)
+_*.json
+_*.txt
+_*.log
+bien_aliases_backup.json
+
+# Shapefiles y otros binarios geográficos
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+galicia_shp/
+
+# Doc no técnica suelta
+*.docx
+*.pdf
+*.xml
