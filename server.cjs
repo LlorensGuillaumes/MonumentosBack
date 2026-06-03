@@ -1555,7 +1555,7 @@ async function toolBuscarCercanos(args) {
                tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url, dist_km
         FROM cand
         WHERE rk_muni <= 2
-        ORDER BY ${solo ? 'bias,' : ''} dist_km
+        ORDER BY ${solo ? '(bias * 25 + dist_km)' : 'dist_km'}
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
@@ -1648,11 +1648,12 @@ REGLAS CRÍTICAS:
       - fin de semana: 80-100 km
       - semana en coche: 120-150 km
    b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
-   c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. NO listes monumentos sueltos en bullet points. Reglas estrictas:
-      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas/zonas que aparezcan en los resultados de las tools. NUNCA inventes direcciones cardinales ("Norte de", "Sur de"…) si no tienes datos de coordenadas que las justifiquen. Si dudas, usa solo los nombres de los municipios visitados.
-      - Cada día junta 2-4 monumentos del mismo municipio o de municipios contiguos.
-      - Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos famosos por encima de fosas, yacimientos sin contexto o museos menores.
+   c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. Reglas estrictas:
+      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si solo encuentras 1 monumento para un día, fusiona ese día con el anterior o el siguiente, NO inventes un día de un solo monumento.
+      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas/zonas que aparezcan en los resultados de las tools. NUNCA inventes direcciones cardinales ("Norte de", "Sur de"…). Si dudas, usa solo los nombres de los municipios visitados (ej: "Día 2 — Calatayud, Tobed y Cervera de la Cañada").
+      - Prioriza UNESCO, catedrales, castillos, monasterios, conjuntos históricos y sitios famosos por encima de fosas, yacimientos sin contexto o museos menores.
       - NO uses un día entero solo para "consultar rutas" ni para "regresar a la ciudad base". Esos no son días de visita real.
+      - Si la tool buscar_cercanos_a devolvió Loarre/Piedra/Albarracín/Veruela/Sos del Rey Católico/San Juan de la Peña/Tarazona/Fuendetodos/Daroca u otros hitos clásicos aragoneses, MENCIÓNALOS — son los más turísticos.
 
    Formato:
 
