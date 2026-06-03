@@ -1613,14 +1613,24 @@ async function toolBuscarCercanos(args) {
     }
     alrededores_por_zona.sort((a, b) => a.dist_km_min - b.dist_km_min);
 
+    // Compactar campos por monumento para ahorrar tokens y caber en el truncado.
+    const compact = m => ({
+        id: m.id, n: m.denominacion, mun: m.municipio, prov: m.provincia,
+        tipo: m.tipo_monumento, dist: m.dist_km,
+        wl: m.wiki_langs || 0,
+        un: m.heritage_world ? 'unesco' : (m.heritage_label ? 'bic' : null),
+    });
     return {
-        centro_resuelto: { lat: centro.lat.toFixed(4), lon: centro.lon.toFixed(4), fuente: centro.fuente },
+        centro: { lat: +centro.lat.toFixed(4), lon: +centro.lon.toFixed(4) },
         radio_km: radioKm,
         count: r.rows.length,
-        ciudad_base: ciudad.slice(0, 8),
-        alrededores_por_zona,
-        // Mantener campo plano por compat con prompt anterior
-        alrededores: fueraBase,
+        ciudad_base: ciudad.slice(0, 8).map(compact),
+        alrededores_por_zona: alrededores_por_zona.map(z => ({
+            zona: z.zona,
+            dist_min_km: z.dist_km_min,
+            municipios: z.municipios,
+            monumentos: z.monumentos.map(compact),
+        })),
     };
 }
 
@@ -1931,7 +1941,7 @@ REGLAS CRÍTICAS:
                 role: 'tool',
                 tool_call_id: call.id,
                 name: fnName, // necesario para el adaptador Gemini (functionResponse.name)
-                content: JSON.stringify(toolResult).substring(0, 6000),
+                content: JSON.stringify(toolResult).substring(0, 16000),
             });
         }
     }
