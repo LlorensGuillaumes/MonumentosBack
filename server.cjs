@@ -1539,25 +1539,27 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
                    COALESCE(w.wiki_lang_count, 0) AS wiki_langs,
-                   -- Bias por popularidad real: número de idiomas Wikipedia (proxy
-                   -- de fama). Loarre/Aljafería ~7 idiomas → bias 0, Castillo
-                   -- de Erla 1 idioma → cae fuera del filtro.
+                   -- Bias por popularidad real (idiomas Wikipedia) + tipo turístico:
+                   --   bias 0 = UNESCO o ≥6 idiomas (Pilar, Loarre, San Juan de la Peña)
+                   --   bias 1 = ≥4 idiomas + tipo top (Catedral, Monasterio, Castillo, Palacio, Conjunto)
+                   --   bias 2 = ≥4 idiomas (otros tipos: Museos, Teatros, Plazas toros)
+                   --   bias 3 = ≥2 idiomas + tipo top
                    (CASE
                         WHEN b.heritage_world IS NOT NULL THEN 0
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 0
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 1
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 2
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 1
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 3
                         ELSE 99
                     END) AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
         ),
         filtrado AS (
-            -- Modo turístico: UNESCO + ≥4 idiomas (cualquier tipo) + ≥2 idiomas
-            -- (tipos top). Esto elimina los castillos menores con 1 idioma o
-            -- ninguno (Erla, Almudevar, Agón...) que solo tienen heritage_label.
+            -- Modo turístico: UNESCO + icónicos (≥6 idiomas) + tipos top con ≥4 idiomas
+            -- + populares con ≥4 idiomas. Elimina lo demás.
             SELECT * FROM cand
-            ${solo ? 'WHERE bias <= 2' : ''}
+            ${solo ? 'WHERE bias <= 3' : ''}
         ),
         diverso AS (
             SELECT *,
