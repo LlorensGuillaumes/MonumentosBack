@@ -1582,22 +1582,45 @@ async function toolBuscarCercanos(args) {
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
-    // Particiona el resultado en "ciudad_base" (<15km) y "alrededores" (>=15km)
-    // para que el LLM vea estructuralmente que tiene que diversificar geográficamente.
+    // Particiona en "ciudad_base" (<15km) y "alrededores_por_zona" (>=15km
+    // agrupado por provincia + sub-cluster por municipio cercano). Pre-cocinar
+    // los clusters ayuda al LLM a asignar 1 día por zona en lugar de listar
+    // monumentos sueltos sin ordenar geográficamente.
     const ciudad = [];
-    const alrededores = [];
+    const fueraBase = [];
     for (const row of r.rows) {
         if (parseFloat(row.dist_km) < 15) ciudad.push(row);
-        else alrededores.push(row);
+        else fueraBase.push(row);
     }
+    // Agrupar fueraBase por provincia; dentro de provincia, sub-cluster greedy
+    // por proximidad (bienes a <25km del primero del cluster).
+    const porProvincia = {};
+    for (const row of fueraBase) {
+        const p = row.provincia || '(sin provincia)';
+        if (!porProvincia[p]) porProvincia[p] = [];
+        porProvincia[p].push(row);
+    }
+    const alrededores_por_zona = [];
+    for (const [provincia, lista] of Object.entries(porProvincia)) {
+        // ordenadas por dist_km ascendente
+        lista.sort((a, b) => parseFloat(a.dist_km) - parseFloat(b.dist_km));
+        alrededores_por_zona.push({
+            zona: provincia,
+            dist_km_min: parseFloat(lista[0].dist_km),
+            municipios: [...new Set(lista.map(x => x.municipio).filter(Boolean))],
+            monumentos: lista,
+        });
+    }
+    alrededores_por_zona.sort((a, b) => a.dist_km_min - b.dist_km_min);
+
     return {
         centro_resuelto: { lat: centro.lat.toFixed(4), lon: centro.lon.toFixed(4), fuente: centro.fuente },
         radio_km: radioKm,
         count: r.rows.length,
         ciudad_base: ciudad.slice(0, 8),
-        alrededores: alrededores,
-        // Compatibilidad: campo plano por si el LLM lo pide
-        monumentos: r.rows,
+        alrededores_por_zona,
+        // Mantener campo plano por compat con prompt anterior
+        alrededores: fueraBase,
     };
 }
 
@@ -1801,11 +1824,12 @@ REGLAS CRÍTICAS:
       - semana en coche: 120-150 km
    b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
    c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. Reglas estrictas:
-      - **MÁXIMO 2 DÍAS EN LA CIUDAD-BASE**. La tool buscar_cercanos_a devuelve un campo "ciudad_base" (sitios a menos de 15km del centro) y un campo "alrededores" (sitios a 15km o más). Usa "ciudad_base" para los 1-2 primeros días. Los demás días DEBEN venir de "alrededores", agrupados por municipios/comarcas próximas entre sí.
-      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si solo hay 1 para un día, fusiónalo con otro.
-      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas (ej: "Día 3 — Huesca y Castillo de Loarre"). NUNCA direcciones cardinales inventadas.
-      - Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. La lista que recibes ya está ordenada por importancia (UNESCO + nº idiomas Wikipedia + tipo).
-      - NO gastes un día entero "consultando rutas" ni "regresando a base". Esos no cuentan.
+      - **MÁXIMO 2 DÍAS EN LA CIUDAD-BASE**. La tool buscar_cercanos_a devuelve "ciudad_base" (sitios a <15km) y "alrededores_por_zona" (array de zonas agrupadas por provincia, cada zona con sus monumentos). Usa "ciudad_base" para los 1-2 primeros días. Los demás días los sacas de "alrededores_por_zona": idealmente UNA zona por día.
+      - **USA TODOS LOS HITS QUE TE DEVUELVE LA TOOL antes de generalizar**. Si tras la ciudad-base tienes 4 zonas con ~3 hits cada una y el viaje es de 7 días, asigna 4 días = 4 zonas + 2 días ciudad-base + 1 día extra a la zona más rica o repartiendo lo que sobre. NO inventes un "Día N — Explorar otras localidades" si quedan hits sin usar.
+      - **PROHIBIDO RELLENAR DÍAS CON GENÉRICOS**: NO "consultar rutas culturales", NO "explorar el resto", NO "regreso a la ciudad". Cada día tiene 2-3 monumentos concretos con su #id de la lista que recibiste.
+      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si una zona tiene 1 solo hit, fusiónala con la zona contigua geográficamente.
+      - Etiqueta cada día con NOMBRES REALES de municipios/zonas (ej: "Día 3 — Huesca y Castillo de Loarre"). NUNCA direcciones cardinales inventadas.
+      - Las rutas culturales (de buscar_rutas) se mencionan en UNA línea al final como complemento, NUNCA ocupan un día entero del itinerario.
 
    Formato:
 
