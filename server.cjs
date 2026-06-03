@@ -2309,6 +2309,7 @@ app.get('/api/monumentos/:id', async (req, res) => {
                      WHEN 'europeana' THEN 4
                      ELSE 5
                    END,
+                   COALESCE((metadata->>'score')::int, 0) DESC NULLS LAST,
                    id`,
                 [id, bien.imagen_url || null]
             ),
