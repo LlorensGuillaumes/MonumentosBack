@@ -1500,8 +1500,8 @@ async function resolverCentroCoords(centro) {
 async function toolBuscarCercanos(args) {
     const centro = await resolverCentroCoords(args.centro);
     if (!centro) return { error: `No localizo "${args.centro}". Prueba con un municipio más concreto.` };
-    const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 80, 200));
-    const limit = Math.max(3, Math.min(parseInt(args.limit) || 12, 20));
+    const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 100, 250));
+    const limit = Math.max(3, Math.min(parseInt(args.limit) || 18, 25));
 
     const where = [
         `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
@@ -1525,17 +1525,37 @@ async function toolBuscarCercanos(args) {
                   ELSE 3 END),`
         : '';
 
+    // Diversidad: máx 2 bienes por municipio para no saturar con la ciudad-base.
+    // Ranking interno: importancia primero, luego distancia.
     const sql = `
-        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comunidad_autonoma,
-               b.tipo_monumento, b.periodo, b.heritage_world,
-               w.heritage_label, w.wikipedia_url,
-               ROUND((ST_Distance(
-                    ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-               ) / 1000)::numeric, 1) AS dist_km
-        FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
-        WHERE ${where.join(' AND ')}
-        ORDER BY ${orderBias} dist_km
+        WITH cand AS (
+            SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comunidad_autonoma,
+                   b.tipo_monumento, b.periodo, b.heritage_world,
+                   w.heritage_label, w.wikipedia_url,
+                   ROUND((ST_Distance(
+                        ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
+                        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+                   ) / 1000)::numeric, 1) AS dist_km,
+                   (CASE WHEN b.heritage_world IS NOT NULL THEN 0
+                         WHEN w.heritage_label IS NOT NULL THEN 1
+                         WHEN w.wikipedia_url IS NOT NULL THEN 2
+                         ELSE 3 END) AS bias,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY COALESCE(b.municipio, b.denominacion)
+                       ORDER BY (CASE WHEN b.heritage_world IS NOT NULL THEN 0
+                                      WHEN w.heritage_label IS NOT NULL THEN 1
+                                      WHEN w.wikipedia_url IS NOT NULL THEN 2
+                                      ELSE 3 END),
+                                b.id
+                   ) AS rk_muni
+            FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
+            WHERE ${where.join(' AND ')}
+        )
+        SELECT id, denominacion, municipio, provincia, comunidad_autonoma,
+               tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url, dist_km
+        FROM cand
+        WHERE rk_muni <= 2
+        ORDER BY ${solo ? 'bias,' : ''} dist_km
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
@@ -1628,18 +1648,24 @@ REGLAS CRÍTICAS:
       - fin de semana: 80-100 km
       - semana en coche: 120-150 km
    b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
-   c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. NO listes monumentos sueltos en bullet points. Formato exacto:
+   c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. NO listes monumentos sueltos en bullet points. Reglas estrictas:
+      - Etiqueta cada día con NOMBRES REALES de municipios/comarcas/zonas que aparezcan en los resultados de las tools. NUNCA inventes direcciones cardinales ("Norte de", "Sur de"…) si no tienes datos de coordenadas que las justifiquen. Si dudas, usa solo los nombres de los municipios visitados.
+      - Cada día junta 2-4 monumentos del mismo municipio o de municipios contiguos.
+      - Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos famosos por encima de fosas, yacimientos sin contexto o museos menores.
+      - NO uses un día entero solo para "consultar rutas" ni para "regresar a la ciudad base". Esos no son días de visita real.
 
-   **Día 1 — [Ciudad base + alrededores inmediatos]**
+   Formato:
+
+   **Día 1 — Zaragoza ciudad**
    Visita la Catedral del Salvador (#XXXX) y el Castillo de la Aljafería (#YYYY)…
 
-   **Día 2 — [Cluster Norte/Sur/Este/Oeste a XX km]**
-   Dirígete a [ciudad] para ver el Castillo de Loarre (#ZZZZ)…
+   **Día 2 — Loarre y Sos del Rey Católico**
+   Castillo de Loarre (#ZZZZ), Sos del Rey Católico (#AAAA)…
 
-   **Día 3 — [Otro cluster]**
+   **Día 3 — Monasterio de Piedra y Calatayud**
    …
 
-   Crea entre 3 y 5 días según la estancia. Para cada día, junta 2-4 monumentos geográficamente cercanos entre sí (mismo municipio o municipios contiguos). Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. Cita siempre con #id. Cierra con una línea sobre 1-2 rutas culturales relevantes si las hay.
+   Crea entre 3 y 6 días según la estancia. Cita siempre con #id. Al final, una línea opcional sobre 1-2 rutas culturales relevantes si la tool buscar_rutas las devolvió.
 
 3. **Búsquedas vagas**: usa buscar_por_texto con palabras de tipo + ubicación juntas.
 
