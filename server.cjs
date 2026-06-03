@@ -1664,7 +1664,7 @@ function openAIToGemini(messages, useTools) {
     }
     const body = {
         contents,
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2000 },
     };
     if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg.content }] };
     if (useTools) {
@@ -1733,7 +1733,7 @@ async function llamarGroqRaw(messages, useTools = false) {
     }
 
     // OpenAI-compatible (groq, cerebras)
-    const body = { model, messages, temperature: 0.3, max_tokens: 1200 };
+    const body = { model, messages, temperature: 0.3, max_tokens: 2000 };
     if (useTools) {
         body.tools = CHAT_TOOLS;
         body.tool_choice = 'auto';
