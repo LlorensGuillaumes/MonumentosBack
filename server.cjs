@@ -1621,10 +1621,11 @@ const LLM_PROVIDERS = {
     cerebras: {
         url: 'https://api.cerebras.ai/v1/chat/completions',
         envKey: 'CEREBRAS_API_KEY',
-        // Cerebras free tier: probables ids según docs recientes:
-        //   llama-4-scout-17b-16e-instruct, llama3.1-8b, qwen-3-32b
-        // Permite override desde Render con CHAT_MODEL=<id-exacto>.
-        model: 'llama-4-scout-17b-16e-instruct',
+        // Modelos disponibles en cuenta free de Cerebras (verificado vía /v1/models):
+        //   gpt-oss-120b (OpenAI open-source 120B, mejor función calling)
+        //   zai-glm-4.7 (Zhipu GLM)
+        // Override sin redeploy: env CHAT_MODEL=<id-exacto>.
+        model: 'gpt-oss-120b',
     },
 };
 
@@ -1836,8 +1837,7 @@ REGLAS CRÍTICAS:
 
 // Debug temporal: lista modelos disponibles del proveedor LLM activo.
 // Útil para descubrir el id exacto de modelo cuando Cerebras/Groq cambian su catálogo.
-// (sin auth temporal para diagnosticar — quitar después)
-app.get('/api/admin/chat/models', async (req, res) => {
+app.get('/api/admin/chat/models', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
         const cfg = LLM_PROVIDERS[providerName];
