@@ -27,21 +27,31 @@ const SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function buildSparql(qids) {
+// QID de la clase "comarca" según CCAA
+const COMARCA_QID_BY_CCAA = {
+    'Catalunya': 'Q937876',         // comarca de Cataluña
+    'Aragón': 'Q61763799',          // comarca de Aragón
+    'Galicia': 'Q5150550',          // comarca de Galicia
+};
+
+function buildSparql(qids, comarcaQid) {
     const values = qids.map(q => `wd:${q}`).join(' ');
+    const filter = comarcaQid
+        ? `?comarca wdt:P31/wdt:P279* wd:${comarcaQid}.`
+        : `?comarca wdt:P31/wdt:P279* wd:Q937876.`;
     return `
         SELECT ?qid ?comarca ?comarcaLabel WHERE {
             VALUES ?qid { ${values} }
             ?qid wdt:P131 ?lugar.
             ?lugar wdt:P131* ?comarca.
-            ?comarca wdt:P31/wdt:P279* wd:Q937876.
+            ${filter}
             SERVICE wikibase:label { bd:serviceParam wikibase:language "ca,es,gl,eu,en". }
         }
     `;
 }
 
-async function fetchSparql(qids) {
-    const query = buildSparql(qids);
+async function fetchSparql(qids, comarcaQid) {
+    const query = buildSparql(qids, comarcaQid);
     for (let i = 0; i < RETRIES; i++) {
         const ctrl = new AbortController();
         const tid = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
@@ -76,6 +86,8 @@ async function main() {
     console.log(`Modo: ${DRY_RUN ? 'DRY RUN' : 'APPLY'}`);
     if (CCAA) console.log(`CCAA: ${CCAA}`);
     if (LIMIT) console.log(`Limit: ${LIMIT}`);
+    const comarcaQid = CCAA && COMARCA_QID_BY_CCAA[CCAA];
+    if (comarcaQid) console.log(`Filtro comarca QID: ${comarcaQid}`);
 
     const ccaaCondition = CCAA ? `AND b.comunidad_autonoma = '${CCAA.replace(/'/g, "''")}'` : '';
     const limitClause = LIMIT ? `LIMIT ${LIMIT}` : '';
@@ -101,7 +113,7 @@ async function main() {
 
     for (let i = 0; i < uniqueQids.length; i += BATCH_SIZE) {
         const batch = uniqueQids.slice(i, i + BATCH_SIZE);
-        const { data, error } = await fetchSparql(batch);
+        const { data, error } = await fetchSparql(batch, comarcaQid);
         if (error) {
             errors += batch.length;
             console.log(`  ⚠ Batch ${i}-${i + batch.length} ERROR: ${error}`);
