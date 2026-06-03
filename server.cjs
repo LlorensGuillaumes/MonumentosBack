@@ -1478,27 +1478,36 @@ async function resolverCentroCoords(centro) {
     if (!q) return null;
     // 1) Probar como municipio exacto (unaccent) con coords promedio
     const m = await db.query(`
-        SELECT AVG(b.latitud)::float AS lat, AVG(b.longitud)::float AS lon, COUNT(*)::int AS n
+        SELECT AVG(b.latitud)::float AS lat, AVG(b.longitud)::float AS lon, COUNT(*)::int AS n,
+               MAX(b.municipio) AS municipio
         FROM bienes b
         WHERE unaccent(LOWER(b.municipio)) = unaccent(LOWER($1))
           AND b.latitud IS NOT NULL AND b.longitud IS NOT NULL
     `, [q]);
     if (m.rows[0]?.n > 0 && m.rows[0].lat) {
-        return { lat: m.rows[0].lat, lon: m.rows[0].lon, fuente: 'municipio', n: m.rows[0].n };
+        return { lat: m.rows[0].lat, lon: m.rows[0].lon, fuente: 'municipio', n: m.rows[0].n, municipio: m.rows[0].municipio };
     }
     // 2) Match por denominación (primer bien que coincida con esa palabra)
     const d = await db.query(`
-        SELECT b.latitud AS lat, b.longitud AS lon
+        SELECT b.latitud AS lat, b.longitud AS lon, b.municipio
         FROM bienes b
         WHERE unaccent(LOWER(b.denominacion)) LIKE unaccent(LOWER($1))
           AND b.latitud IS NOT NULL AND b.longitud IS NOT NULL
         ORDER BY b.id LIMIT 1
     `, [`%${q}%`]);
-    if (d.rows[0]?.lat) return { lat: d.rows[0].lat, lon: d.rows[0].lon, fuente: 'denominacion' };
+    if (d.rows[0]?.lat) return { lat: d.rows[0].lat, lon: d.rows[0].lon, fuente: 'denominacion', municipio: d.rows[0].municipio };
     return null;
 }
 
-const TOP_TIPOS_SQL = `('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico','Muralla','Iglesia / Ermita')`;
+// Tipos con valor turístico/patrimonial. Amplio para que joyas locales tipo
+// masías d'indians (Casa señorial), molinos, arquitectura rural, torres
+// defensivas, conjuntos urbanos, ermitas pequeñas... entren al ranking.
+const TOP_TIPOS_SQL = `(
+    'Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio',
+    'Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico',
+    'Muralla','Iglesia / Ermita','Casa señorial / Mansión','Torre',
+    'Arquitectura rural','Molino','Patrimonio industrial','Acueducto','Puente'
+)`;
 
 // Tres fórmulas de bias según el modo de búsqueda del usuario.
 // Cuanto más bajo el bias, más arriba en el ranking.
@@ -1562,10 +1571,11 @@ async function toolBuscarCercanos(args) {
                   ELSE 3 END),`
         : '';
 
-    // Diversidad por banda de distancia (20 km cada una) para no saturar con la
-    // ciudad-base. Cada banda devuelve hasta 3 candidatos ordenados por importancia.
-    // Así Loarre (78km), Piedra (90km), Veruela (62km), San Juan de la Peña (96km),
-    // Albarracín (145km) sí llegan al top en sus respectivas bandas.
+    // Garantiza presencia local: las cosas del MISMO MUNICIPIO que el centro
+    // pasan por su propia partition (es_local=1) con top 8 amplio. Eso asegura
+    // que Castell de Ribes, casas señoriales y demás joyas del pueblo entran
+    // aunque haya hits con más idiomas en el área cercana.
+    const muniCentro = centro.municipio || '';
     const sql = `
         WITH cand AS (
             SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comunidad_autonoma,
@@ -1576,36 +1586,37 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
                    COALESCE(w.wiki_lang_count, 0) AS wiki_langs,
-                   -- Bias variable según modo (imprescindibles/mixto/descubre).
-                   -- "Top tipos": Catedral, Monasterio, Castillo, Palacio, Conjunto histórico,
-                   -- Conjunto arquitectónico, Yacimiento arqueológico, Muralla, Iglesia.
+                   (CASE WHEN unaccent(LOWER(b.municipio)) = unaccent(LOWER(${muniCentro ? `'${muniCentro.replace(/'/g, "''")}'` : `''`})) THEN 1 ELSE 0 END) AS es_local,
                    ${MODO_BIAS_SQL[modo] || MODO_BIAS_SQL.mixto} AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
         ),
         filtrado AS (
-            -- Filtro depende del modo: imprescindibles más estricto, descubre más amplio.
             SELECT * FROM cand
             ${solo ? `WHERE bias <= ${modo === 'imprescindibles' ? 2 : 4}` : ''}
         ),
-        diverso AS (
-            SELECT *,
-                   -- Dentro de cada (banda, provincia, bias) ordenamos por nº idiomas DESC
-                   -- y luego distancia. Eso asegura que Sant Sebastià dels Gorgs (3 idiomas)
-                   -- entra antes que Rambla de Nostra Senyora (2 idiomas) en el mismo
-                   -- partition — relevancia interna del cluster.
-                   ROW_NUMBER() OVER (
-                       PARTITION BY FLOOR(dist_km / 25), provincia, bias
-                       ORDER BY wiki_langs DESC, dist_km
-                   ) AS rk_banda
-            FROM filtrado
+        rk_locales AS (
+            -- Top 8 dentro del municipio base (Castell, casas señoriales, etc.)
+            SELECT *, ROW_NUMBER() OVER (ORDER BY bias, wiki_langs DESC, dist_km) AS rk
+            FROM filtrado WHERE es_local = 1
+        ),
+        rk_fuera AS (
+            -- Top 4 por (banda 15km, provincia, bias) para alrededores.
+            SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY FLOOR(dist_km / 15), provincia, bias
+                ORDER BY wiki_langs DESC, dist_km
+            ) AS rk
+            FROM filtrado WHERE es_local = 0
         )
         SELECT id, denominacion, municipio, provincia, comunidad_autonoma,
                tipo_monumento, periodo, heritage_world, heritage_label, wikipedia_url,
-               wiki_langs, dist_km
-        FROM diverso
-        WHERE rk_banda <= 3
-        ORDER BY ${solo ? '(bias * 15 + dist_km)' : 'dist_km'}
+               wiki_langs, dist_km, es_local
+        FROM (
+            SELECT *, rk FROM rk_locales WHERE rk <= 8
+            UNION ALL
+            SELECT *, rk FROM rk_fuera WHERE rk <= 4
+        ) u
+        ORDER BY es_local DESC, ${solo ? '(bias * 15 + dist_km)' : 'dist_km'}
         LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
