@@ -1207,14 +1207,16 @@ const CHAT_TOOLS = [
         type: 'function',
         function: {
             name: 'buscar_rutas',
-            description: 'Busca rutas culturales temáticas curadas (Camino de Santiago, Ruta del Cister, Ruta de Don Quijote, etc.). Usa cuando el usuario pida una ruta, itinerario, o sugieras una visita por zona.',
+            description: 'Busca rutas culturales temáticas curadas (Camino de Santiago, Ruta del Cister, etc.). Para preguntas de viaje, USA SIEMPRE el parámetro cerca_de en lugar de texto, para filtrar por proximidad geográfica real y evitar mezclar rutas de otras regiones.',
             parameters: {
                 type: 'object',
                 properties: {
-                    texto: { type: 'string', description: 'Nombre, tema o región de la ruta (ej: Cister, Santiago, Cataluña)' },
+                    texto: { type: 'string', description: 'Nombre, tema o región (úsalo SOLO cuando no haya base geográfica)' },
+                    cerca_de: { type: 'string', description: 'Ciudad/municipio de referencia. Si se da, devuelve solo rutas con paradas dentro de radio_km. PREFERIDO para preguntas de viaje.' },
+                    radio_km: { type: 'integer', description: 'Radio en km cuando se usa cerca_de', default: 200 },
                     limit: { type: 'integer', default: 8 },
                 },
-                required: ['texto'],
+                required: [],
             },
         },
     },
@@ -1381,8 +1383,52 @@ async function toolBuscarPorDescripcion(args) {
 }
 
 async function toolBuscarRutas(args) {
-    const palabras = extraerPalabrasClave(args.texto);
     const limit = Math.min(args.limit || 8, 12);
+
+    // Modo proximidad: si viene cerca_de, filtra rutas con al menos una parada en el radio
+    if (args.cerca_de) {
+        const centro = await resolverCentroCoords(args.cerca_de);
+        if (centro) {
+            const radioKm = Math.max(20, Math.min(parseInt(args.radio_km) || 200, 400));
+            const r = await db.query(`
+                WITH cerca AS (
+                    SELECT DISTINCT rcp.ruta_id,
+                           MIN(ST_Distance(
+                              ST_SetSRID(ST_MakePoint(rcp.longitud, rcp.latitud), 4326)::geography,
+                              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+                           ) / 1000)::numeric AS min_dist_km
+                    FROM rutas_culturales_paradas rcp
+                    WHERE rcp.latitud IS NOT NULL AND rcp.longitud IS NOT NULL
+                      AND ST_DWithin(
+                         ST_SetSRID(ST_MakePoint(rcp.longitud, rcp.latitud), 4326)::geography,
+                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                         $3
+                      )
+                    GROUP BY rcp.ruta_id
+                )
+                SELECT rc.id, rc.slug, rc.nombre, rc.descripcion, rc.region, rc.pais, rc.tema, rc.num_paradas,
+                       ROUND(c.min_dist_km, 0) AS dist_km
+                FROM cerca c
+                JOIN rutas_culturales rc ON rc.id = c.ruta_id
+                WHERE rc.activa = true
+                ORDER BY c.min_dist_km
+                LIMIT ${limit}
+            `, [centro.lon, centro.lat, radioKm * 1000]);
+            return {
+                centro_resuelto: { lat: centro.lat.toFixed(4), lon: centro.lon.toFixed(4) },
+                radio_km: radioKm,
+                count: r.rows.length,
+                rutas: r.rows.map(row => ({
+                    ...row,
+                    descripcion: row.descripcion ? row.descripcion.substring(0, 300) : null,
+                })),
+            };
+        }
+        // Si no resuelve el centro, fallback a búsqueda por texto del propio cerca_de
+        if (!args.texto) args.texto = args.cerca_de;
+    }
+
+    const palabras = extraerPalabrasClave(args.texto || '');
     if (palabras.length === 0) {
         const r = await db.query(`SELECT id, slug, nombre, descripcion, region, pais, tema, num_paradas FROM rutas_culturales WHERE activa = true LIMIT ${limit}`);
         return { count: r.rows.length, rutas: r.rows };
@@ -1576,13 +1622,24 @@ REGLAS CRÍTICAS:
    - "Catalonia"/"Cataluña"/"Catalunya" → region="Cataluña"
    - Responde al usuario en su mismo idioma.
 
-2. **VIAJES Y VISITAS (regla principal)**: si el usuario menciona estancia con base + duración + transporte (ej: "estaré una semana en Zaragoza en coche", "fin de semana en Toledo", "tres días por Cádiz"), DEBES:
-   a) Llamar a buscar_cercanos_a({centro: "ciudad_base", radio_km: X}) — radio según duración:
+2. **VIAJES Y VISITAS (regla principal — OBLIGATORIA)**: si el usuario menciona estancia con base + duración + transporte (ej: "estaré una semana en Zaragoza en coche", "fin de semana en Toledo", "tres días por Cádiz"), TIENES QUE:
+   a) Llamar OBLIGATORIAMENTE a buscar_cercanos_a({centro: "ciudad_base", radio_km: X, limit: 15}) — NUNCA buscar_por_texto sola en estos casos. Radio según duración:
       - día/escapada corta: 50 km
       - fin de semana: 80-100 km
       - semana en coche: 120-150 km
-   b) Llamar también a buscar_rutas con el nombre de la región/zona para ofrecer itinerarios temáticos.
-   c) En la respuesta, AGRUPA los monumentos por zonas/clusters geográficos (3-5 grupos), sugiriendo un día por cluster. Ej: "Día 1: Tarazona + Veruela | Día 2: Calatayud + Daroca | Día 3: Loarre + Huesca...". Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. Sé concreto con los #id.
+   b) Llamar también a buscar_rutas con cerca_de="ciudad_base" para que devuelva solo rutas con paradas en la zona (no rutas de otras regiones).
+   c) **OBLIGATORIO: organizar la respuesta como un itinerario por DÍAS agrupados por zona geográfica**. NO listes monumentos sueltos en bullet points. Formato exacto:
+
+   **Día 1 — [Ciudad base + alrededores inmediatos]**
+   Visita la Catedral del Salvador (#XXXX) y el Castillo de la Aljafería (#YYYY)…
+
+   **Día 2 — [Cluster Norte/Sur/Este/Oeste a XX km]**
+   Dirígete a [ciudad] para ver el Castillo de Loarre (#ZZZZ)…
+
+   **Día 3 — [Otro cluster]**
+   …
+
+   Crea entre 3 y 5 días según la estancia. Para cada día, junta 2-4 monumentos geográficamente cercanos entre sí (mismo municipio o municipios contiguos). Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. Cita siempre con #id. Cierra con una línea sobre 1-2 rutas culturales relevantes si las hay.
 
 3. **Búsquedas vagas**: usa buscar_por_texto con palabras de tipo + ubicación juntas.
 
