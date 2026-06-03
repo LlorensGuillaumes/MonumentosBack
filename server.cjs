@@ -1539,27 +1539,27 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
                    COALESCE(w.wiki_lang_count, 0) AS wiki_langs,
-                   -- Bias por popularidad real (idiomas Wikipedia) + tipo turístico:
-                   --   bias 0 = UNESCO o ≥6 idiomas (Pilar, Loarre, San Juan de la Peña)
-                   --   bias 1 = ≥4 idiomas + tipo top (Catedral, Monasterio, Castillo, Palacio, Conjunto)
-                   --   bias 2 = ≥4 idiomas (otros tipos: Museos, Teatros, Plazas toros)
-                   --   bias 3 = ≥2 idiomas + tipo top
+                   -- Bias por popularidad real (idiomas Wikipedia) + tipo turístico.
+                   -- Tipos "top": Catedral, Monasterio, Castillo, Palacio, Conjunto histórico,
+                   -- Conjunto arquitectónico, Yacimiento arqueológico (joyas locales tipo
+                   -- Olèrdola, Sant Sebastià dels Gorgs).
                    (CASE
                         WHEN b.heritage_world IS NOT NULL THEN 0
                         WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 1
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico') THEN 1
                         WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico') THEN 3
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico') THEN 3
+                        WHEN COALESCE(w.wiki_lang_count, 0) >= 1 AND w.heritage_label IS NOT NULL AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico','Muralla','Iglesia / Ermita') THEN 4
                         ELSE 99
                     END) AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
         ),
         filtrado AS (
-            -- Modo turístico: UNESCO + icónicos (≥6 idiomas) + tipos top con ≥4 idiomas
-            -- + populares con ≥4 idiomas. Elimina lo demás.
+            -- Modo turístico: incluye también joyas locales tipo top con 1-3 idiomas
+            -- (Sant Sebastià dels Gorgs, Olèrdola), no solo los de fama mundial.
             SELECT * FROM cand
-            ${solo ? 'WHERE bias <= 3' : ''}
+            ${solo ? 'WHERE bias <= 4' : ''}
         ),
         diverso AS (
             SELECT *,
