@@ -1860,7 +1860,9 @@ REGLAS CRÍTICAS:
 
 5. **Cita SIEMPRE los monumentos con #id**. Sé conciso (máx 5 párrafos), pero para preguntas de viaje puedes extenderte hasta 8.
 
-6. **PROHIBIDO INVENTAR**: NO menciones nada que no haya aparecido en los resultados de tus tools. Si una tool devuelve count=0, dilo claramente y sugiere refinar.`;
+6. **PROHIBIDO INVENTAR**: NO menciones nada que no haya aparecido en los resultados de tus tools. Si una tool devuelve count=0, dilo claramente y sugiere refinar.
+
+7. **#id EXACTOS — REGLA CRÍTICA**: cada #id que escribas DEBE ser el campo "id" exacto del JSON de la tool. NUNCA copies un #id de un monumento y lo pegues junto al nombre de otro. Si nombras la Catedral del Salvador, busca su id en el JSON (será #228657, NO #228677 que es el Pilar). Verifica id+nombre antes de escribirlo.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
