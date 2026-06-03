@@ -1834,6 +1834,31 @@ REGLAS CRÍTICAS:
     };
 }
 
+// Debug temporal: lista modelos disponibles del proveedor LLM activo.
+// Útil para descubrir el id exacto de modelo cuando Cerebras/Groq cambian su catálogo.
+app.get('/api/admin/chat/models', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
+        const cfg = LLM_PROVIDERS[providerName];
+        if (!cfg) return res.status(400).json({ error: `Provider desconocido: ${providerName}` });
+        const apiKey = process.env[cfg.envKey];
+        if (!apiKey) return res.status(500).json({ error: `${cfg.envKey} no configurada` });
+        const modelsUrl = cfg.url.replace('/chat/completions', '/models');
+        const r = await fetch(modelsUrl, { headers: { Authorization: `Bearer ${apiKey}` } });
+        const text = await r.text();
+        let body; try { body = JSON.parse(text); } catch { body = text; }
+        res.json({
+            provider: providerName,
+            model_actual_configurado: process.env.CHAT_MODEL || cfg.model,
+            url: modelsUrl,
+            status: r.status,
+            response: body,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) => {
     try {
         const { question } = req.body;
