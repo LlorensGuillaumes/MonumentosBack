@@ -1617,17 +1617,96 @@ const LLM_PROVIDERS = {
         url: 'https://api.groq.com/openai/v1/chat/completions',
         envKey: 'GROQ_API_KEY',
         model: 'llama-3.3-70b-versatile',
+        adapter: 'openai',
     },
     cerebras: {
         url: 'https://api.cerebras.ai/v1/chat/completions',
         envKey: 'CEREBRAS_API_KEY',
-        // Modelos disponibles en cuenta free de Cerebras (verificado vía /v1/models):
-        //   gpt-oss-120b (OpenAI open-source 120B, mejor función calling)
-        //   zai-glm-4.7 (Zhipu GLM)
-        // Override sin redeploy: env CHAT_MODEL=<id-exacto>.
         model: 'gpt-oss-120b',
+        adapter: 'openai',
+    },
+    gemini: {
+        // El path lleva el modelo + acción; lo sustituimos en runtime.
+        url: 'https://generativelanguage.googleapis.com/v1beta/models/MODEL:generateContent',
+        envKey: 'GEMINI_API_KEY',
+        model: 'gemini-2.5-flash',
+        adapter: 'gemini',
     },
 };
+
+// Adapta el array de mensajes estilo OpenAI al formato de Gemini.
+function openAIToGemini(messages, useTools) {
+    const systemMsg = messages.find(m => m.role === 'system');
+    const contents = [];
+    for (const m of messages) {
+        if (m.role === 'system') continue;
+        if (m.role === 'user') {
+            contents.push({ role: 'user', parts: [{ text: m.content || '' }] });
+        } else if (m.role === 'assistant') {
+            const parts = [];
+            if (m.content) parts.push({ text: m.content });
+            if (m.tool_calls) {
+                for (const tc of m.tool_calls) {
+                    let args = {};
+                    try { args = JSON.parse(tc.function.arguments); } catch {}
+                    parts.push({ functionCall: { name: tc.function.name, args } });
+                }
+            }
+            if (parts.length > 0) contents.push({ role: 'model', parts });
+        } else if (m.role === 'tool') {
+            let response;
+            try { response = JSON.parse(m.content); } catch { response = { content: m.content }; }
+            contents.push({
+                role: 'user',
+                parts: [{ functionResponse: { name: m.name || 'unknown', response } }],
+            });
+        }
+    }
+    const body = {
+        contents,
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
+    };
+    if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg.content }] };
+    if (useTools) {
+        body.tools = [{
+            functionDeclarations: CHAT_TOOLS.map(t => ({
+                name: t.function.name,
+                description: t.function.description,
+                parameters: t.function.parameters,
+            })),
+        }];
+    }
+    return body;
+}
+
+function geminiToOpenAI(data, model) {
+    const cand = data.candidates?.[0];
+    const message = { role: 'assistant', content: '' };
+    const toolCalls = [];
+    let tcCounter = 0;
+    for (const part of cand?.content?.parts || []) {
+        if (typeof part.text === 'string') message.content += part.text;
+        if (part.functionCall) {
+            toolCalls.push({
+                id: `call_gem_${++tcCounter}`,
+                type: 'function',
+                function: {
+                    name: part.functionCall.name,
+                    arguments: JSON.stringify(part.functionCall.args || {}),
+                },
+            });
+        }
+    }
+    if (toolCalls.length > 0) message.tool_calls = toolCalls;
+    return {
+        model,
+        choices: [{ message }],
+        usage: {
+            prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
+            completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
+        },
+    };
+}
 
 async function llamarGroqRaw(messages, useTools = false) {
     const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
@@ -1635,20 +1714,30 @@ async function llamarGroqRaw(messages, useTools = false) {
     if (!cfg) throw new Error(`CHAT_PROVIDER desconocido: ${providerName}`);
     const apiKey = process.env[cfg.envKey];
     if (!apiKey) throw new Error(`${cfg.envKey} no configurada`);
+    const model = process.env.CHAT_MODEL || cfg.model;
 
-    const body = {
-        model: process.env.CHAT_MODEL || cfg.model,
-        messages,
-        temperature: 0.3,
-        max_tokens: 1200,
-    };
+    if (cfg.adapter === 'gemini') {
+        const body = openAIToGemini(messages, useTools);
+        const url = cfg.url.replace('MODEL', model);
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const errBody = await res.text();
+            throw new Error(`${providerName} ${res.status}: ${errBody.substring(0, 300)}`);
+        }
+        const data = await res.json();
+        return geminiToOpenAI(data, model);
+    }
+
+    // OpenAI-compatible (groq, cerebras)
+    const body = { model, messages, temperature: 0.3, max_tokens: 1200 };
     if (useTools) {
         body.tools = CHAT_TOOLS;
         body.tool_choice = 'auto';
     } else {
-        // Forced-final (sin tools): obligamos al modelo a generar texto y no
-        // intentar otro tool_call. Importante para gpt-oss y otros reasoning
-        // que tienden a quedarse en bucles de tool calling.
         body.tool_choice = 'none';
     }
     const res = await fetch(cfg.url, {
@@ -1815,6 +1904,7 @@ REGLAS CRÍTICAS:
             messages.push({
                 role: 'tool',
                 tool_call_id: call.id,
+                name: fnName, // necesario para el adaptador Gemini (functionResponse.name)
                 content: JSON.stringify(toolResult).substring(0, 6000),
             });
         }
