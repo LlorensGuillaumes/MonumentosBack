@@ -1187,6 +1187,25 @@ const CHAT_TOOLS = [
     {
         type: 'function',
         function: {
+            name: 'buscar_cercanos_a',
+            description: 'Busca monumentos cercanos a un punto de referencia (ciudad, municipio o monumento) dentro de un radio. ÚSALA cuando el usuario planee un viaje, día de visita, escapada o pregunte "qué visitar cerca de X" / "a una hora en coche de Y". Permite filtrar por tipo de monumento.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    centro: { type: 'string', description: 'Nombre de ciudad, municipio o monumento de referencia (ej: "Zaragoza", "Toledo", "Catedral de Sevilla")' },
+                    radio_km: { type: 'integer', description: 'Radio en km desde el centro (5-200). Día de visita ≈ 50km, escapada fin de semana ≈ 100-150km.', default: 80 },
+                    tipo_monumento: { type: 'string', description: 'Filtro opcional por tipo' },
+                    periodo: { type: 'string', description: 'Filtro opcional por periodo' },
+                    solo_estrella: { type: 'boolean', description: 'Si true, prioriza UNESCO + monumentos con Wikipedia (recomendado para turismo)', default: true },
+                    limit: { type: 'integer', default: 12 },
+                },
+                required: ['centro'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
             name: 'buscar_rutas',
             description: 'Busca rutas culturales temáticas curadas (Camino de Santiago, Ruta del Cister, Ruta de Don Quijote, etc.). Usa cuando el usuario pida una ruta, itinerario, o sugieras una visita por zona.',
             parameters: {
@@ -1233,13 +1252,20 @@ async function toolBuscarPorFiltros(args) {
     if (filtros.length === 0) return { error: 'Sin filtros, especifica al menos uno.' };
 
     const limit = Math.min(args.limit || 10, 15);
+    // Orden por importancia: UNESCO → heritage_label → wikipedia → resto
     const sql = `
         SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
                b.tipo_monumento, b.periodo, w.estilo, w.inception, w.religion,
-               w.dedicado_a, b.heritage_world
+               w.dedicado_a, b.heritage_world, w.heritage_label, w.wikipedia_url
         FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
         WHERE ${filtros.join(' AND ')}
-        ORDER BY b.id LIMIT ${limit}
+        ORDER BY
+            (CASE WHEN b.heritage_world IS NOT NULL THEN 0
+                  WHEN w.heritage_label IS NOT NULL THEN 1
+                  WHEN w.wikipedia_url IS NOT NULL THEN 2
+                  ELSE 3 END),
+            b.id
+        LIMIT ${limit}
     `;
     const r = await db.query(sql, params);
     return { count: r.rows.length, monumentos: r.rows };
@@ -1400,6 +1426,81 @@ async function toolBuscarRutas(args) {
     };
 }
 
+async function resolverCentroCoords(centro) {
+    const q = String(centro || '').trim();
+    if (!q) return null;
+    // 1) Probar como municipio exacto (unaccent) con coords promedio
+    const m = await db.query(`
+        SELECT AVG(b.latitud)::float AS lat, AVG(b.longitud)::float AS lon, COUNT(*)::int AS n
+        FROM bienes b
+        WHERE unaccent(LOWER(b.municipio)) = unaccent(LOWER($1))
+          AND b.latitud IS NOT NULL AND b.longitud IS NOT NULL
+    `, [q]);
+    if (m.rows[0]?.n > 0 && m.rows[0].lat) {
+        return { lat: m.rows[0].lat, lon: m.rows[0].lon, fuente: 'municipio', n: m.rows[0].n };
+    }
+    // 2) Match por denominación (primer bien que coincida con esa palabra)
+    const d = await db.query(`
+        SELECT b.latitud AS lat, b.longitud AS lon
+        FROM bienes b
+        WHERE unaccent(LOWER(b.denominacion)) LIKE unaccent(LOWER($1))
+          AND b.latitud IS NOT NULL AND b.longitud IS NOT NULL
+        ORDER BY b.id LIMIT 1
+    `, [`%${q}%`]);
+    if (d.rows[0]?.lat) return { lat: d.rows[0].lat, lon: d.rows[0].lon, fuente: 'denominacion' };
+    return null;
+}
+
+async function toolBuscarCercanos(args) {
+    const centro = await resolverCentroCoords(args.centro);
+    if (!centro) return { error: `No localizo "${args.centro}". Prueba con un municipio más concreto.` };
+    const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 80, 200));
+    const limit = Math.max(3, Math.min(parseInt(args.limit) || 12, 20));
+
+    const where = [
+        `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
+        `ST_DWithin(
+            ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+            $3
+        )`,
+    ];
+    const params = [centro.lon, centro.lat, radioKm * 1000];
+    let p = 4;
+    if (args.tipo_monumento) { where.push(`b.tipo_monumento = $${p++}`); params.push(args.tipo_monumento); }
+    if (args.periodo)         { where.push(`b.periodo = $${p++}`);         params.push(args.periodo); }
+
+    // Bias estrella: si solo_estrella !== false → priorizar UNESCO + heritage_label + wikipedia_url
+    const solo = args.solo_estrella !== false;
+    const orderBias = solo
+        ? `(CASE WHEN b.heritage_world IS NOT NULL THEN 0
+                  WHEN w.heritage_label IS NOT NULL THEN 1
+                  WHEN w.wikipedia_url IS NOT NULL THEN 2
+                  ELSE 3 END),`
+        : '';
+
+    const sql = `
+        SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comunidad_autonoma,
+               b.tipo_monumento, b.periodo, b.heritage_world,
+               w.heritage_label, w.wikipedia_url,
+               ROUND((ST_Distance(
+                    ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
+                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+               ) / 1000)::numeric, 1) AS dist_km
+        FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY ${orderBias} dist_km
+        LIMIT ${limit}
+    `;
+    const r = await db.query(sql, params);
+    return {
+        centro_resuelto: { lat: centro.lat.toFixed(4), lon: centro.lon.toFixed(4), fuente: centro.fuente },
+        radio_km: radioKm,
+        count: r.rows.length,
+        monumentos: r.rows,
+    };
+}
+
 const TOOL_EXECUTORS = {
     buscar_por_filtros: toolBuscarPorFiltros,
     buscar_por_persona: toolBuscarPorPersona,
@@ -1407,6 +1508,7 @@ const TOOL_EXECUTORS = {
     info_monumento: toolInfoMonumento,
     buscar_por_descripcion: toolBuscarPorDescripcion,
     buscar_rutas: toolBuscarRutas,
+    buscar_cercanos_a: toolBuscarCercanos,
 };
 
 async function llamarGroqRaw(messages, useTools = false) {
@@ -1434,38 +1536,61 @@ async function llamarGroqRaw(messages, useTools = false) {
     return await res.json();
 }
 
+function rankearFuentes(allMonumentos, answerText) {
+    const citedIds = new Set();
+    const re = /#(\d{1,7})/g;
+    let m;
+    while ((m = re.exec(answerText || '')) !== null) citedIds.add(parseInt(m[1], 10));
+
+    const arr = Array.from(allMonumentos.values()).map(m => {
+        const cited = citedIds.has(m.bien_id);
+        const score =
+            (cited ? 100 : 0) +
+            (m.heritage_world ? 30 : 0) +
+            (m.heritage_label ? 15 : 0) +
+            (m.wikipedia_url ? 8 : 0) +
+            (m.similarity ? Math.min(parseFloat(m.similarity) * 5, 5) : 0);
+        return { ...m, _score: score, _cited: cited };
+    });
+    arr.sort((a, b) => b._score - a._score);
+    return arr.slice(0, 8).map(({ _score, ...rest }) => rest);
+}
+
 async function chatConToolUse(question) {
     const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo, especializado en el catálogo "Patrimonio Europeo" (316k+ monumentos en España, Italia, Francia, Portugal).
 
-Tienes acceso a 6 funciones (tools) que puedes invocar para consultar la base de datos:
+Tienes acceso a 7 funciones (tools) que puedes invocar para consultar la base de datos:
 - buscar_por_filtros: filtros estructurados (tipo, periodo, religión, ubicación, dedicatoria, UNESCO, etc.)
 - buscar_por_persona: arquitectos/escultores/autores (P84 architect, P170 creator, etc.)
 - buscar_por_texto: búsqueda fuzzy por nombre o ubicación (incluye municipio/provincia/comarca)
-- buscar_por_descripcion: busca en el TEXTO Wikipedia. ÚSALA para comarcas catalanas (Conca de Barberà, Penedès, Empordà, Garrotxa, etc.) o conceptos no estructurados que no están en denominación ni filtros.
-- buscar_rutas: rutas culturales temáticas (Camino Santiago, Ruta del Cister, etc.). Úsala cuando el usuario pida rutas/itinerarios o cuando sugieras visitas por zona.
+- buscar_por_descripcion: busca en el TEXTO Wikipedia. ÚSALA para comarcas catalanas o conceptos no estructurados.
+- buscar_rutas: rutas culturales temáticas (Camino Santiago, Ruta del Cister, etc.)
+- buscar_cercanos_a: monumentos cercanos a un punto + radio. ÚSALA SIEMPRE para preguntas turísticas con zona base ("estaré en Zaragoza", "qué visitar cerca de Toledo", "a 1h en coche de X").
 - info_monumento: ficha completa de UN monumento por su id
 
 REGLAS CRÍTICAS:
-1. **Idiomas**: el usuario puede preguntar en cualquier idioma (español, catalán, inglés, francés, italiano, portugués). Los VALORES de filtros en BD están en ESPAÑOL. Cuando llames a buscar_por_filtros, traduce los conceptos:
-   - "15th century" / "siglo XV" / "segle XV" → periodo="Gótico" (gótico tardío) o periodo="Renacimiento" (segunda mitad)
-   - "Romanesque" / "románico" / "romànic" → periodo="Románico"
-   - "castle" / "castillo" / "castell" → tipo_monumento="Castillo / Fortaleza"
-   - "church" / "iglesia" / "església" → tipo_monumento="Iglesia / Ermita"
-   - "Catalonia" / "Cataluña" / "Catalunya" → region="Cataluña"
+1. **Idiomas**: el usuario puede preguntar en cualquier idioma. Los VALORES de filtros en BD están en ESPAÑOL. Traduce los conceptos:
+   - "castle"/"castillo"/"castell" → tipo_monumento="Castillo / Fortaleza"
+   - "church"/"iglesia"/"església" → tipo_monumento="Iglesia / Ermita"
+   - "Romanesque"/"románico" → periodo="Románico"
+   - "Catalonia"/"Cataluña"/"Catalunya" → region="Cataluña"
    - Responde al usuario en su mismo idioma.
 
-2. **Cuando el usuario describe vagamente algo**: usa buscar_por_texto incluyendo palabras de tipo + ubicación juntas. Ej: "monasterio en el Penedès" → buscar_por_texto({texto: "monasterio Penedès"}) — la función busca en denominación Y municipio/comarca.
+2. **VIAJES Y VISITAS (regla principal)**: si el usuario menciona estancia con base + duración + transporte (ej: "estaré una semana en Zaragoza en coche", "fin de semana en Toledo", "tres días por Cádiz"), DEBES:
+   a) Llamar a buscar_cercanos_a({centro: "ciudad_base", radio_km: X}) — radio según duración:
+      - día/escapada corta: 50 km
+      - fin de semana: 80-100 km
+      - semana en coche: 120-150 km
+   b) Llamar también a buscar_rutas con el nombre de la región/zona para ofrecer itinerarios temáticos.
+   c) En la respuesta, AGRUPA los monumentos por zonas/clusters geográficos (3-5 grupos), sugiriendo un día por cluster. Ej: "Día 1: Tarazona + Veruela | Día 2: Calatayud + Daroca | Día 3: Loarre + Huesca...". Prioriza UNESCO, catedrales, castillos, monasterios y conjuntos históricos. Sé concreto con los #id.
 
-3. **Combina tools cuando ayude**:
-   - Filtros amplios primero → si el usuario pide profundizar en uno, usa info_monumento(bien_id).
-   - Si el usuario menciona una COMARCA catalana (Conca de Barberà, Penedès, Empordà, Selva, Garrotxa, Ribera d'Ebre, etc.), usa SIEMPRE buscar_por_descripcion porque el campo "comarca" está vacío en BD.
-   - Si el usuario quiere viajar a una zona o pide recomendaciones por área, SUGIERE TAMBIÉN una ruta cultural cercana llamando a buscar_rutas con el nombre de la región o zona (ej: "Montblanc" → buscar_rutas("Cataluña Cister") puede aportar la Ruta del Cister cercana).
+3. **Búsquedas vagas**: usa buscar_por_texto con palabras de tipo + ubicación juntas.
 
-4. **Cita SIEMPRE los monumentos con #id** (formato "#12345"). Sé conciso, máx 5 párrafos.
+4. **Combina tools cuando ayude**: para comarcas catalanas (Conca de Barberà, Penedès, Empordà, Garrotxa...) usa buscar_por_descripcion porque el campo comarca está vacío. Para profundizar en un monumento usa info_monumento.
 
-5. **PROHIBIDO INVENTAR**: NO menciones rutas, monumentos, autores o ids que no hayan aparecido en los resultados de tus herramientas. Si una tool devuelve count=0, NO inventes resultados. Si no encuentras nada, dilo claramente: "no he encontrado X en el catálogo".
+5. **Cita SIEMPRE los monumentos con #id**. Sé conciso (máx 5 párrafos), pero para preguntas de viaje puedes extenderte hasta 8.
 
-6. Si la búsqueda devuelve 0 resultados, comunícalo y sugiere refinar.`;
+6. **PROHIBIDO INVENTAR**: NO menciones nada que no haya aparecido en los resultados de tus tools. Si una tool devuelve count=0, dilo claramente y sugiere refinar.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
@@ -1490,7 +1615,7 @@ REGLAS CRÍTICAS:
             return {
                 answer: msg.content || '',
                 tools_used: toolsUsed,
-                sources: Array.from(allMonumentos.values()).slice(0, 8),
+                sources: rankearFuentes(allMonumentos, msg.content),
                 meta: {
                     model: result.model,
                     tokens_in: totalTokensIn,
@@ -1516,15 +1641,18 @@ REGLAS CRÍTICAS:
             }
             toolsUsed.push({ name: fnName, args, count: toolResult?.count, error: toolResult?.error });
 
-            // Acumular monumentos para "Fuentes" del UI
+            // Acumular monumentos para "Fuentes" del UI (con metadatos para ranking)
             if (toolResult?.monumentos) {
-                for (const m of toolResult.monumentos.slice(0, 5)) {
+                for (const m of toolResult.monumentos.slice(0, 8)) {
                     if (!allMonumentos.has(m.id)) {
                         allMonumentos.set(m.id, {
                             bien_id: m.id,
                             denominacion: m.denominacion,
                             municipio: m.municipio,
                             similarity: m.similarity,
+                            heritage_world: m.heritage_world || null,
+                            heritage_label: m.heritage_label || null,
+                            wikipedia_url: m.wikipedia_url || null,
                         });
                     }
                 }
@@ -1533,6 +1661,9 @@ REGLAS CRÍTICAS:
                     bien_id: toolResult.id,
                     denominacion: toolResult.denominacion,
                     municipio: toolResult.municipio,
+                    heritage_world: toolResult.heritage_world || null,
+                    heritage_label: toolResult.heritage_label || null,
+                    wikipedia_url: toolResult.wikipedia_url || null,
                 });
             }
 
@@ -1548,10 +1679,11 @@ REGLAS CRÍTICAS:
     const finalResult = await llamarGroqRaw(messages, false);
     totalTokensIn += finalResult.usage?.prompt_tokens || 0;
     totalTokensOut += finalResult.usage?.completion_tokens || 0;
+    const finalAnswer = finalResult.choices[0]?.message?.content || '(respuesta vacía tras 3 iteraciones)';
     return {
-        answer: finalResult.choices[0]?.message?.content || '(respuesta vacía tras 3 iteraciones)',
+        answer: finalAnswer,
         tools_used: toolsUsed,
-        sources: Array.from(allMonumentos.values()).slice(0, 8),
+        sources: rankearFuentes(allMonumentos, finalAnswer),
         meta: {
             model: finalResult.model,
             tokens_in: totalTokensIn,
