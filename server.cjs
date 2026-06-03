@@ -1621,7 +1621,10 @@ const LLM_PROVIDERS = {
     cerebras: {
         url: 'https://api.cerebras.ai/v1/chat/completions',
         envKey: 'CEREBRAS_API_KEY',
-        model: 'llama-3.3-70b',
+        // Cerebras free tier: probables ids según docs recientes:
+        //   llama-4-scout-17b-16e-instruct, llama3.1-8b, qwen-3-32b
+        // Permite override desde Render con CHAT_MODEL=<id-exacto>.
+        model: 'llama-4-scout-17b-16e-instruct',
     },
 };
 
@@ -1633,7 +1636,7 @@ async function llamarGroqRaw(messages, useTools = false) {
     if (!apiKey) throw new Error(`${cfg.envKey} no configurada`);
 
     const body = {
-        model: cfg.model,
+        model: process.env.CHAT_MODEL || cfg.model,
         messages,
         temperature: 0.3,
         max_tokens: 800,
