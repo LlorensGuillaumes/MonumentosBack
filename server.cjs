@@ -2626,6 +2626,36 @@ app.get('/api/monumentos', async (req, res) => {
 });
 
 /**
+ * GET /api/monumentos/by-ids?ids=1,2,3,...
+ * Devuelve coords + nombre + tipo para una lista de ids.
+ * Usado por la página /preguntame para pintar markers de los #id citados por el chat.
+ */
+app.get('/api/monumentos/by-ids', async (req, res) => {
+    try {
+        const raw = String(req.query.ids || '').trim();
+        if (!raw) return res.json({ count: 0, monumentos: [] });
+        const ids = raw.split(',')
+            .map(s => parseInt(s.trim(), 10))
+            .filter(n => Number.isInteger(n) && n > 0)
+            .slice(0, 50);
+        if (ids.length === 0) return res.json({ count: 0, monumentos: [] });
+        const r = await db.query(`
+            SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
+                   b.latitud, b.longitud, b.tipo_monumento, b.periodo, b.heritage_world,
+                   w.heritage_label, w.wikipedia_url
+            FROM bienes b LEFT JOIN wikidata w ON w.bien_id = b.id
+            WHERE b.id = ANY($1::int[])
+        `, [ids]);
+        const byId = new Map(r.rows.map(row => [row.id, row]));
+        // Conservar orden de petición
+        const ordered = ids.map(id => byId.get(id)).filter(Boolean);
+        res.json({ count: ordered.length, monumentos: ordered });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * GET /api/monumentos/radio?lat=...&lng=...&km=...
  * Buscar monumentos en un radio desde un punto
  */
