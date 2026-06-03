@@ -1197,6 +1197,7 @@ const CHAT_TOOLS = [
                     tipo_monumento: { type: 'string', description: 'Filtro opcional por tipo' },
                     periodo: { type: 'string', description: 'Filtro opcional por periodo' },
                     solo_estrella: { type: 'boolean', description: 'Si true, prioriza UNESCO + monumentos con Wikipedia (recomendado para turismo)', default: true },
+                    modo: { type: 'string', enum: ['imprescindibles', 'mixto', 'descubre'], description: 'imprescindibles = solo los más famosos (UNESCO, Sagrada Familia, Pilar, Aljafería). mixto = equilibrio entre canónicos y joyas locales (default). descubre = joyas locales menos conocidas (Sant Sebastià dels Gorgs, Olèrdola, ermitas mudéjares, etc) — relega los muy famosos al final.' },
                     limit: { type: 'integer', default: 12 },
                 },
                 required: ['centro'],
@@ -1497,11 +1498,47 @@ async function resolverCentroCoords(centro) {
     return null;
 }
 
+const TOP_TIPOS_SQL = `('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico','Muralla','Iglesia / Ermita')`;
+
+// Tres fórmulas de bias según el modo de búsqueda del usuario.
+// Cuanto más bajo el bias, más arriba en el ranking.
+const MODO_BIAS_SQL = {
+    // Imprescindibles: prioriza UNESCO + alta popularidad (lo que sale en Google).
+    imprescindibles: `(CASE
+        WHEN b.heritage_world IS NOT NULL THEN 0
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
+        ELSE 99
+    END)`,
+    // Mixto (default): equilibra famosos y joyas locales. Igual que antes pero aceptando algunas joyas.
+    mixto: `(CASE
+        WHEN b.heritage_world IS NOT NULL THEN 0
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 3
+        WHEN w.heritage_label IS NOT NULL AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 4
+        ELSE 99
+    END)`,
+    // Descubre: invierte. Joyas locales (BIC + tipo top, poca wiki) suben. Famosos quedan al final.
+    descubre: `(CASE
+        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 0
+        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) = 0 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 2
+        WHEN w.heritage_label IS NOT NULL AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 3
+        WHEN b.heritage_world IS NOT NULL THEN 4
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 5
+        ELSE 99
+    END)`,
+};
+
 async function toolBuscarCercanos(args) {
     const centro = await resolverCentroCoords(args.centro);
     if (!centro) return { error: `No localizo "${args.centro}". Prueba con un municipio más concreto.` };
     const radioKm = Math.max(5, Math.min(parseInt(args.radio_km) || 150, 300));
     const limit = Math.max(3, Math.min(parseInt(args.limit) || 25, 30));
+    const modo = ['imprescindibles', 'mixto', 'descubre'].includes(args.modo) ? args.modo : 'mixto';
 
     const where = [
         `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
@@ -1539,27 +1576,17 @@ async function toolBuscarCercanos(args) {
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                    ) / 1000)::numeric, 1) AS dist_km,
                    COALESCE(w.wiki_lang_count, 0) AS wiki_langs,
-                   -- Bias por popularidad real (idiomas Wikipedia) + tipo turístico.
-                   -- Tipos "top": Catedral, Monasterio, Castillo, Palacio, Conjunto histórico,
-                   -- Conjunto arquitectónico, Yacimiento arqueológico (joyas locales tipo
-                   -- Olèrdola, Sant Sebastià dels Gorgs).
-                   (CASE
-                        WHEN b.heritage_world IS NOT NULL THEN 0
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico') THEN 1
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico') THEN 3
-                        WHEN COALESCE(w.wiki_lang_count, 0) >= 1 AND w.heritage_label IS NOT NULL AND b.tipo_monumento IN ('Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio','Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico','Muralla','Iglesia / Ermita') THEN 4
-                        ELSE 99
-                    END) AS bias
+                   -- Bias variable según modo (imprescindibles/mixto/descubre).
+                   -- "Top tipos": Catedral, Monasterio, Castillo, Palacio, Conjunto histórico,
+                   -- Conjunto arquitectónico, Yacimiento arqueológico, Muralla, Iglesia.
+                   ${MODO_BIAS_SQL[modo] || MODO_BIAS_SQL.mixto} AS bias
             FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
         ),
         filtrado AS (
-            -- Modo turístico: incluye también joyas locales tipo top con 1-3 idiomas
-            -- (Sant Sebastià dels Gorgs, Olèrdola), no solo los de fama mundial.
+            -- Filtro depende del modo: imprescindibles más estricto, descubre más amplio.
             SELECT * FROM cand
-            ${solo ? 'WHERE bias <= 4' : ''}
+            ${solo ? `WHERE bias <= ${modo === 'imprescindibles' ? 2 : 4}` : ''}
         ),
         diverso AS (
             SELECT *,
@@ -1807,7 +1834,7 @@ function rankearFuentes(allMonumentos, answerText) {
     return arr.slice(0, 8).map(({ _score, ...rest }) => rest);
 }
 
-async function chatConToolUse(question) {
+async function chatConToolUse(question, modoUsuario = 'mixto') {
     const systemPrompt = `Eres un asistente experto en patrimonio histórico y arquitectónico europeo, especializado en el catálogo "Patrimonio Europeo" (316k+ monumentos en España, Italia, Francia, Portugal).
 
 Tienes acceso a 7 funciones (tools) que puedes invocar para consultar la base de datos:
@@ -1862,7 +1889,13 @@ REGLAS CRÍTICAS:
 
 6. **PROHIBIDO INVENTAR**: NO menciones nada que no haya aparecido en los resultados de tus tools. Si una tool devuelve count=0, dilo claramente y sugiere refinar.
 
-7. **#id EXACTOS — REGLA CRÍTICA**: cada #id que escribas DEBE ser el campo "id" exacto del JSON de la tool. NUNCA copies un #id de un monumento y lo pegues junto al nombre de otro. Si nombras la Catedral del Salvador, busca su id en el JSON (será #228657, NO #228677 que es el Pilar). Verifica id+nombre antes de escribirlo.`;
+7. **#id EXACTOS — REGLA CRÍTICA**: cada #id que escribas DEBE ser el campo "id" exacto del JSON de la tool. NUNCA copies un #id de un monumento y lo pegues junto al nombre de otro. Si nombras la Catedral del Salvador, busca su id en el JSON (será #228657, NO #228677 que es el Pilar). Verifica id+nombre antes de escribirlo.
+
+8. **MODO DE BÚSQUEDA**: el usuario tiene activo el MODO_${modoUsuario.toUpperCase()}:
+   - imprescindibles: prioriza UNESCO y los hitos más famosos (Sagrada Familia, El Pilar, Aljafería). Mejor para primer viaje.
+   - mixto: equilibrio entre canónicos y joyas locales (default).
+   - descubre: el catálogo prioriza joyas locales menos conocidas (Sant Sebastià dels Gorgs, Olèrdola, ermitas mudéjares). En este modo NO insistas en los iconos turísticos archiconocidos — el usuario quiere descubrir lo que NO sale en las guías. Habla con entusiasmo de los sitios menos conocidos que devuelve la tool.
+   Cuando llames a buscar_cercanos_a, SIEMPRE pasa el parámetro modo="${modoUsuario}" para que el ranking respete la preferencia del usuario.`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
@@ -1995,16 +2028,17 @@ app.get('/api/admin/chat/models', authMiddleware, adminMiddleware, async (req, r
 
 app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const { question } = req.body;
+        const { question, modo } = req.body;
         if (!question || question.trim().length < 3) {
             return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
         }
+        const modoSan = ['imprescindibles', 'mixto', 'descubre'].includes(modo) ? modo : 'mixto';
         const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
         const expectedKey = LLM_PROVIDERS[providerName]?.envKey || 'GROQ_API_KEY';
         if (!process.env[expectedKey]) {
             return res.status(500).json({ error: `${expectedKey} no configurada en Render` });
         }
-        const result = await chatConToolUse(question);
+        const result = await chatConToolUse(question, modoSan);
         res.json(result);
     } catch (err) {
         console.error('Chat error:', err);
