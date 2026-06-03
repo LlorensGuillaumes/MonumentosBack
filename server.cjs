@@ -1609,11 +1609,31 @@ const TOOL_EXECUTORS = {
     buscar_cercanos_a: toolBuscarCercanos,
 };
 
-async function llamarGroqRaw(messages, useTools = false) {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) throw new Error('GROQ_API_KEY no configurada');
-    const body = {
+// Proveedor LLM intercambiable via env CHAT_PROVIDER. Default: groq.
+// Para usar Cerebras: setear CHAT_PROVIDER=cerebras y CEREBRAS_API_KEY en Render.
+// Para volver atrás: quitar CHAT_PROVIDER (o ponerlo a groq).
+const LLM_PROVIDERS = {
+    groq: {
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        envKey: 'GROQ_API_KEY',
         model: 'llama-3.3-70b-versatile',
+    },
+    cerebras: {
+        url: 'https://api.cerebras.ai/v1/chat/completions',
+        envKey: 'CEREBRAS_API_KEY',
+        model: 'llama-3.3-70b',
+    },
+};
+
+async function llamarGroqRaw(messages, useTools = false) {
+    const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
+    const cfg = LLM_PROVIDERS[providerName];
+    if (!cfg) throw new Error(`CHAT_PROVIDER desconocido: ${providerName}`);
+    const apiKey = process.env[cfg.envKey];
+    if (!apiKey) throw new Error(`${cfg.envKey} no configurada`);
+
+    const body = {
+        model: cfg.model,
         messages,
         temperature: 0.3,
         max_tokens: 800,
@@ -1622,14 +1642,14 @@ async function llamarGroqRaw(messages, useTools = false) {
         body.tools = CHAT_TOOLS;
         body.tool_choice = 'auto';
     }
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(cfg.url, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     });
     if (!res.ok) {
         const errBody = await res.text();
-        throw new Error(`Groq ${res.status}: ${errBody.substring(0, 300)}`);
+        throw new Error(`${providerName} ${res.status}: ${errBody.substring(0, 300)}`);
     }
     return await res.json();
 }
@@ -1817,8 +1837,10 @@ app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) =>
         if (!question || question.trim().length < 3) {
             return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
         }
-        if (!process.env.GROQ_API_KEY) {
-            return res.status(500).json({ error: 'GROQ_API_KEY no configurada en Render' });
+        const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
+        const expectedKey = LLM_PROVIDERS[providerName]?.envKey || 'GROQ_API_KEY';
+        if (!process.env[expectedKey]) {
+            return res.status(500).json({ error: `${expectedKey} no configurada en Render` });
         }
         const result = await chatConToolUse(question);
         res.json(result);
