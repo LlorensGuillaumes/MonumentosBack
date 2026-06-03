@@ -1590,13 +1590,13 @@ async function toolBuscarCercanos(args) {
         ),
         diverso AS (
             SELECT *,
-                   -- Diversidad por (banda 25km, provincia, bias). Garantiza que
-                   -- dentro de cada banda+provincia haya hasta 2 UNESCO y 2 BIC
-                   -- + wiki. Así una banda saturada por sites UNESCO Mudéjar no
-                   -- excluye Veruela/Piedra/Loarre (BIC famosos).
+                   -- Dentro de cada (banda, provincia, bias) ordenamos por nº idiomas DESC
+                   -- y luego distancia. Eso asegura que Sant Sebastià dels Gorgs (3 idiomas)
+                   -- entra antes que Rambla de Nostra Senyora (2 idiomas) en el mismo
+                   -- partition — relevancia interna del cluster.
                    ROW_NUMBER() OVER (
                        PARTITION BY FLOOR(dist_km / 25), provincia, bias
-                       ORDER BY dist_km
+                       ORDER BY wiki_langs DESC, dist_km
                    ) AS rk_banda
             FROM filtrado
         )
