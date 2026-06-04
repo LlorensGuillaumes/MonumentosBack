@@ -1925,7 +1925,7 @@ function rankearFuentes(allMonumentos, answerText) {
     return arr.slice(0, 8).map(({ _score, ...rest }) => rest);
 }
 
-async function chatConToolUse(question, modoUsuario = 'descubre') {
+async function chatConToolUse(question, modoUsuario = 'descubre', historial = []) {
     const systemPrompt = `Eres un asistente experto en patrimonio histórico europeo (316k monumentos en España, Italia, Francia, Portugal). Tienes 7 tools: buscar_cercanos_a (monumentos en radio desde un centro — ÚSALA SIEMPRE para viajes), buscar_por_filtros (tipo, periodo, religión, UNESCO…), buscar_por_persona (arquitectos/escultores), buscar_por_texto (fuzzy nombre+ubicación), buscar_por_descripcion (texto Wikipedia — para comarcas catalanas y conceptos no estructurados), buscar_rutas (rutas culturales temáticas), info_monumento (ficha de UN id).
 
 REGLAS:
@@ -1956,6 +1956,15 @@ REGLAS:
 
     const messages = [
         { role: 'system', content: systemPrompt },
+        // Historial de turnos previos: pares user/assistant para que el LLM
+        // recuerde el contexto (ej. "voy con camper" tras una pregunta sobre
+        // ruta románica → debe mantener "ruta románica", no preguntar desde cero).
+        // Solo aceptamos roles válidos y filtramos system/error/tool del frontend.
+        ...historial
+            .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
+            .filter(m => typeof m.content === 'string' && m.content.trim().length > 0)
+            .map(m => ({ role: m.role, content: m.content }))
+            .slice(-10),
         { role: 'user', content: question },
     ];
 
@@ -2085,17 +2094,18 @@ app.get('/api/admin/chat/models', authMiddleware, adminMiddleware, async (req, r
 
 app.post('/api/admin/chat', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const { question, modo } = req.body;
+        const { question, modo, history } = req.body;
         if (!question || question.trim().length < 3) {
             return res.status(400).json({ error: 'Pregunta muy corta (mín 3 caracteres)' });
         }
         const modoSan = ['imprescindibles', 'mixto', 'descubre'].includes(modo) ? modo : 'descubre';
+        const historial = Array.isArray(history) ? history : [];
         const providerName = (process.env.CHAT_PROVIDER || 'groq').toLowerCase();
         const expectedKey = LLM_PROVIDERS[providerName]?.envKey || 'GROQ_API_KEY';
         if (!process.env[expectedKey]) {
             return res.status(500).json({ error: `${expectedKey} no configurada en Render` });
         }
-        const result = await chatConToolUse(question, modoSan);
+        const result = await chatConToolUse(question, modoSan, historial);
         res.json(result);
     } catch (err) {
         console.error('Chat error:', err);
