@@ -1499,14 +1499,18 @@ async function resolverCentroCoords(centro) {
     return null;
 }
 
-// Tipos con valor turístico/patrimonial. Amplio para que joyas locales tipo
-// masías d'indians (Casa señorial), molinos, arquitectura rural, torres
-// defensivas, conjuntos urbanos, ermitas pequeñas... entren al ranking.
-const TOP_TIPOS_SQL = `(
-    'Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio',
-    'Conjunto histórico','Conjunto arquitectónico','Yacimiento arqueológico',
-    'Muralla','Iglesia / Ermita','Casa señorial / Mansión','Torre',
-    'Arquitectura rural','Molino','Patrimonio industrial','Acueducto','Puente'
+// Expresión booleana: ¿es tipo turístico/patrimonial relevante?
+// Yacimiento arqueológico solo cuenta si está protegido (BIC/UNESCO), si no la BD
+// se llena de mini-yacimientos sin importancia que ni los locales conocen.
+const ES_TIPO_TOP = `(
+    b.tipo_monumento IN (
+        'Catedral','Monasterio / Convento','Castillo / Fortaleza','Palacio',
+        'Conjunto histórico','Conjunto arquitectónico',
+        'Muralla','Iglesia / Ermita','Casa señorial / Mansión','Torre',
+        'Arquitectura rural','Molino','Patrimonio industrial','Acueducto','Puente'
+    )
+    OR (b.tipo_monumento = 'Yacimiento arqueológico'
+        AND (w.heritage_label IS NOT NULL OR b.heritage_world IS NOT NULL))
 )`;
 
 // Tres fórmulas de bias según el modo de búsqueda del usuario.
@@ -1516,7 +1520,7 @@ const MODO_BIAS_SQL = {
     imprescindibles: `(CASE
         WHEN b.heritage_world IS NOT NULL THEN 0
         WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
-        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND ${ES_TIPO_TOP} THEN 1
         WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
         ELSE 99
     END)`,
@@ -1524,18 +1528,18 @@ const MODO_BIAS_SQL = {
     mixto: `(CASE
         WHEN b.heritage_world IS NOT NULL THEN 0
         WHEN COALESCE(w.wiki_lang_count, 0) >= 6 THEN 0
-        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 4 AND ${ES_TIPO_TOP} THEN 1
         WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 2
-        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 3
-        WHEN w.heritage_label IS NOT NULL AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 4
+        WHEN COALESCE(w.wiki_lang_count, 0) >= 2 AND ${ES_TIPO_TOP} THEN 3
+        WHEN w.heritage_label IS NOT NULL AND ${ES_TIPO_TOP} THEN 4
         ELSE 99
     END)`,
     // Descubre: invierte. Joyas locales (BIC + tipo top, poca wiki) suben. Famosos quedan al final.
     descubre: `(CASE
-        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 0
-        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) = 0 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 1
-        WHEN COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 2
-        WHEN w.heritage_label IS NOT NULL AND b.tipo_monumento IN ${TOP_TIPOS_SQL} THEN 3
+        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND ${ES_TIPO_TOP} THEN 0
+        WHEN w.heritage_label IS NOT NULL AND COALESCE(w.wiki_lang_count, 0) = 0 AND ${ES_TIPO_TOP} THEN 1
+        WHEN COALESCE(w.wiki_lang_count, 0) BETWEEN 1 AND 3 AND ${ES_TIPO_TOP} THEN 2
+        WHEN w.heritage_label IS NOT NULL AND ${ES_TIPO_TOP} THEN 3
         WHEN b.heritage_world IS NOT NULL THEN 4
         WHEN COALESCE(w.wiki_lang_count, 0) >= 4 THEN 5
         ELSE 99
@@ -1904,7 +1908,7 @@ REGLAS CRÍTICAS:
       - **MÁXIMO 2 DÍAS EN LA CIUDAD-BASE**. La tool buscar_cercanos_a devuelve "ciudad_base" (sitios a <15km) y "alrededores_por_zona" (array de zonas agrupadas por provincia, cada zona con sus monumentos). Usa "ciudad_base" para los 1-2 primeros días. Los demás días los sacas de "alrededores_por_zona": idealmente UNA zona por día.
       - **USA TODOS LOS HITS QUE TE DEVUELVE LA TOOL antes de generalizar**. Si tras la ciudad-base tienes 4 zonas con ~3 hits cada una y el viaje es de 7 días, asigna 4 días = 4 zonas + 2 días ciudad-base + 1 día extra a la zona más rica o repartiendo lo que sobre. NO inventes un "Día N — Explorar otras localidades" si quedan hits sin usar.
       - **PROHIBIDO RELLENAR DÍAS CON GENÉRICOS**: NO "consultar rutas culturales", NO "explorar el resto", NO "regreso a la ciudad". Cada día tiene 2-3 monumentos concretos con su #id de la lista que recibiste.
-      - **CADA DÍA DEBE TENER AL MENOS 2 MONUMENTOS**. Si una zona tiene 1 solo hit, fusiónala con la zona contigua geográficamente.
+      - **CADA DÍA DEBE TENER 2-4 MONUMENTOS**. Si una zona tiene 1 solo hit, fusiónala con la zona contigua geográficamente. Cuando veas joyas locales cercanas entre sí en alrededores (p. ej. Olèrdola + Sant Sebastià dels Gorgs + Castell de Ribes están todos a menos de 15 km entre sí en la zona del Penedès), MÓNTALAS COMO RUTA DE UN DÍA, no las repartas en días distintos con un sitio cada uno.
       - Etiqueta cada día con NOMBRES REALES de municipios/zonas (ej: "Día 3 — Huesca y Castillo de Loarre"). NUNCA direcciones cardinales inventadas.
       - Las rutas culturales (de buscar_rutas) se mencionan en UNA línea al final como complemento, NUNCA ocupan un día entero del itinerario.
 
