@@ -1849,9 +1849,9 @@ async function llamarGroqRaw(messages, useTools = false) {
             return result;
         } catch (err) {
             const msg = err.message || '';
-            // Solo fallback en cuota/rate (429), disponibilidad (503) o 500/502/504.
-            // Errores 4xx distintos (400 bad request, 401 auth) NO disparan fallback.
-            if (!/(\b429\b|\b503\b|\b502\b|\b504\b|\b500\b)/.test(msg)) throw err;
+            // Fallback en errores de cuota, rate, disponibilidad, bloqueos.
+            // NO disparamos fallback en 400 (bad request — bug nuestro) ni 401 (auth — key mala).
+            if (/\b40[01]\b/.test(msg) && !/blocked|rate|quota|busy|exhaust/i.test(msg)) throw err;
             console.warn(`Chat: ${providerName} falló (${msg.slice(0, 120)}), probando siguiente...`);
             lastErr = err;
         }
