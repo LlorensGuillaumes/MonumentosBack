@@ -634,6 +634,20 @@ async function adminMiddleware(req, res, next) {
     }
 }
 
+// Permite admin OR colaborador. Usado para acciones de curación (excluir_chat, etc.).
+async function curatorMiddleware(req, res, next) {
+    try {
+        const usuario = await db.obtenerUsuarioPorId(req.user.id);
+        if (!usuario || (usuario.rol !== 'admin' && usuario.rol !== 'colaborador')) {
+            return res.status(403).json({ error: 'Acceso denegado: se requiere rol admin o colaborador' });
+        }
+        req.user.rol = usuario.rol;
+        next();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
 async function premiumMiddleware(req, res, next) {
     try {
         const usuario = await db.obtenerUsuarioPorId(req.user.id);
@@ -1020,6 +1034,7 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
         FROM ranked r
         JOIN bienes b ON b.id = r.id
         LEFT JOIN wikidata w ON b.id = w.bien_id
+        WHERE NOT b.excluir_chat
         ORDER BY r.sim DESC
     `, params);
 
@@ -1257,6 +1272,9 @@ async function toolBuscarPorFiltros(args) {
 
     if (filtros.length === 0) return { error: 'Sin filtros, especifica al menos uno.' };
 
+    // Si NO se pidió tipo_monumento explícito, ocultar marcados excluir_chat.
+    if (!args.tipo_monumento) filtros.push('NOT b.excluir_chat');
+
     const limit = Math.min(args.limit || 10, 15);
     // Orden por importancia: UNESCO → heritage_label → wikipedia → resto
     const sql = `
@@ -1279,13 +1297,33 @@ async function toolBuscarPorFiltros(args) {
 
 async function toolBuscarPorPersona(args) {
     const limit = Math.min(args.limit || 10, 15);
+    const q = (args.nombre || '').trim();
+    if (!q) return { count: 0, monumentos: [] };
+    // Combina:
+    //   1) ILIKE clásico para coincidencias claras
+    //   2) similaridad pg_trgm para variantes ("jose cañas" ↔ "Josep Cañas")
+    //   3) split por palabras: cada palabra >=3 chars puede matchear por separado (apellido)
+    const palabras = q.toLowerCase().split(/\s+/).filter(w => w.length >= 3);
+    const conds = [`unaccent(LOWER(bp.nombre)) ILIKE unaccent($1)`];
+    const params = [`%${q.toLowerCase()}%`];
+    let pi = 2;
+    // Trigram similarity (umbral 0.35 — captura erratas y variantes)
+    conds.push(`similarity(unaccent(LOWER(bp.nombre)), unaccent($${pi++})) > 0.35`);
+    params.push(q.toLowerCase());
+    // OR por palabra suelta (apellidos)
+    for (const w of palabras) {
+        conds.push(`unaccent(LOWER(bp.nombre)) ILIKE unaccent($${pi++})`);
+        params.push(`%${w}%`);
+    }
     const r = await db.query(`
         SELECT DISTINCT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
-               b.tipo_monumento, b.periodo, bp.nombre AS persona, bp.rol
+               b.tipo_monumento, b.periodo, bp.nombre AS persona, bp.rol,
+               similarity(unaccent(LOWER(bp.nombre)), unaccent($${pi})) AS sim
         FROM bien_personas bp JOIN bienes b ON b.id = bp.bien_id
-        WHERE LOWER(bp.nombre) LIKE $1
-        ORDER BY b.id LIMIT ${limit}
-    `, [`%${args.nombre.toLowerCase()}%`]);
+        WHERE (${conds.join(' OR ')}) AND NOT b.excluir_chat
+        ORDER BY sim DESC NULLS LAST, b.id
+        LIMIT ${limit}
+    `, [...params, q.toLowerCase()]);
     return { count: r.rows.length, monumentos: r.rows };
 }
 
@@ -1556,8 +1594,13 @@ async function toolBuscarCercanos(args) {
     const limit = Math.max(3, Math.min(parseInt(args.limit) || 25, 30));
     const modo = ['imprescindibles', 'mixto', 'descubre'].includes(args.modo) ? args.modo : 'mixto';
 
+    // Filtro de curación: si el usuario NO pide un tipo explícito, ocultar los
+    // marcados como excluir_chat (cova negra y similares). Si pide tipo concreto
+    // (yacimientos, castillos…), incluir también los marcados de ese tipo.
+    const filtraExcluidos = !args.tipo_monumento;
     const where = [
         `b.latitud IS NOT NULL AND b.longitud IS NOT NULL`,
+        ...(filtraExcluidos ? ['NOT b.excluir_chat'] : []),
         `ST_DWithin(
             ST_SetSRID(ST_MakePoint(b.longitud, b.latitud), 4326)::geography,
             ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
@@ -2769,6 +2812,25 @@ app.get('/api/monumentos/radio', async (req, res) => {
             total: result.rows.length,
             items: result.rows,
         });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * PATCH /api/bienes/:id/excluir-chat
+ * Admin o colaborador marca/desmarca un bien para ocultarlo del chat por defecto.
+ * Si el usuario pide explícitamente el tipo (yacimientos, castillos…), seguirá apareciendo.
+ */
+app.patch('/api/bienes/:id/excluir-chat', authMiddleware, curatorMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id inválido' });
+        const { excluir } = req.body;
+        const val = excluir === true || excluir === 'true' || excluir === 1;
+        const r = await db.query('UPDATE bienes SET excluir_chat = $1, updated_at = NOW() WHERE id = $2 RETURNING id, excluir_chat', [val, id]);
+        if (r.rows.length === 0) return res.status(404).json({ error: 'Bien no encontrado' });
+        res.json({ id: r.rows[0].id, excluir_chat: r.rows[0].excluir_chat, updated_by: req.user.rol });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
