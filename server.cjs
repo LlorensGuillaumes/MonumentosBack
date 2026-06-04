@@ -34,6 +34,9 @@ const upload = multer({
 });
 
 const app = express();
+// Render es un proxy (1 hop). Sin esto, express-rate-limit ve todos los requests
+// con la misma IP (la del proxy) y rate-limitea a TODOS los usuarios juntos.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'patrimonio-europeo-secret-key-2026';
 const JWT_EXPIRES_IN = '30d';
@@ -206,10 +209,10 @@ const generalLimiter = rateLimit({
 });
 app.use('/api', generalLimiter);
 
-// Rate limiting — bulk data endpoints: 60 req/min per IP (map + search + filtros disparan en bursts)
+// Rate limiting — bulk data endpoints: 150 req/min per IP (map navegado activo + filtros disparan bursts)
 const dataLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60,
+    max: 150,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('data'),
