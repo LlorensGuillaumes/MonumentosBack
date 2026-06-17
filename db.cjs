@@ -465,6 +465,18 @@ async function inicializarTablas() {
         await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS metadata_externa JSONB`);
     } catch (e) { /* columns may already exist */ }
 
+    // Columnes opcionals usades pel chat (toolBuscarPorFiltros) i altres tools.
+    // Si no existeixen al schema, el tool peta amb 42703. Idempotents.
+    try {
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS excluir_chat BOOLEAN DEFAULT false`);
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS heritage_world TEXT`);
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS coords_precision TEXT`);
+        await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS religion TEXT`);
+        await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS dedicado_a TEXT`);
+        await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS parte_de TEXT`);
+        await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS propietario TEXT`);
+    } catch (e) { /* columns may already exist */ }
+
     // denominaciones_alternativas — sinònims, multi-idioma, noms UNESCO/popular
     // El chat hi busca via JOIN, així que ha d'existir sempre.
     try {
