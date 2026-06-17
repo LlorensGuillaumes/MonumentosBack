@@ -458,6 +458,13 @@ async function inicializarTablas() {
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_bienes_periodo ON bienes(periodo)`);
     } catch (e) { /* columns may already exist */ }
 
+    // metadata_externa JSONB — guarda camps d'integracions que no tenen
+    // columna equivalent (riesgo, estado, link, pubDate, etc.) sense pèrdua.
+    try {
+        await pool.query(`ALTER TABLE bienes ADD COLUMN IF NOT EXISTS metadata_externa JSONB`);
+        await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS metadata_externa JSONB`);
+    } catch (e) { /* columns may already exist */ }
+
     _initialized = true;
 }
 

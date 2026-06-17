@@ -22,6 +22,34 @@ const db = require('../../db.cjs');
 
 const router = express.Router();
 
+// ---------- Taula d'auditoria d'integracions ----------
+// Es crea al primer ús per evitar tocar inicializarTablas(). Guarda traça
+// completa de cada modificació feta des d'una integració (per a auditoria,
+// rollback i evitar dobles integracions de la mateixa font+codi).
+let _tableReady = false;
+async function ensureIntegrationTable() {
+    if (_tableReady) return;
+    await db.query(`
+        CREATE TABLE IF NOT EXISTS integration_matches (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER REFERENCES bienes(id) ON DELETE SET NULL,
+            fuente TEXT NOT NULL,
+            codigo_externo TEXT,
+            accion TEXT NOT NULL CHECK (accion IN ('INSERT','UPDATE','LINK','SKIP')),
+            tabla TEXT,
+            campos_modificados JSONB,
+            valores_anteriors JSONB,
+            confianza REAL,
+            revisado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_intmatch_bien ON integration_matches(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_intmatch_fuente ON integration_matches(fuente);
+        CREATE INDEX IF NOT EXISTS idx_intmatch_codigo ON integration_matches(fuente, codigo_externo);
+    `, []);
+    _tableReady = true;
+}
+
 const xmlParser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
@@ -35,6 +63,7 @@ const xmlParser = new XMLParser({
 const ALLOWED_TABLES = [
     'bienes',
     'wikidata',
+    'sipca',
     'contactos_municipios',
     'rutas_culturales_paradas',
     'imagenes',
@@ -91,6 +120,36 @@ function parseFile(buffer, originalName) {
     throw new Error(`Format no soportat: ${ext}`);
 }
 
+// Aplana objectes anidats amb dot notation per fer-los mapejables:
+//   { coordenadas: { lat: 42, lng: 1 } } → { 'coordenadas.lat': 42, 'coordenadas.lng': 1 }
+// Conserva arrays i strings tal qual (KML <coordinates> queda com a string CSV).
+function flattenRecord(obj, prefix = '', out = {}, depth = 0) {
+    if (depth > 4 || obj == null || typeof obj !== 'object' || Array.isArray(obj)) {
+        if (prefix) out[prefix] = obj;
+        return out;
+    }
+    const entries = Object.entries(obj);
+    if (!entries.length) {
+        if (prefix) out[prefix] = obj;
+        return out;
+    }
+    for (const [k, v] of entries) {
+        const key = k.startsWith('@_') ? `${prefix || ''}${prefix ? '.' : ''}${k.slice(2)}` // treu prefix XML attribute
+                  : prefix ? `${prefix}.${k}` : k;
+        if (v != null && typeof v === 'object' && !Array.isArray(v)) {
+            flattenRecord(v, key, out, depth + 1);
+        } else {
+            out[key] = v;
+        }
+    }
+    return out;
+}
+
+function flattenAll(records) {
+    if (!Array.isArray(records)) return records;
+    return records.map(r => (r && typeof r === 'object' && !Array.isArray(r)) ? flattenRecord(r) : r);
+}
+
 function inferSchema(records) {
     if (!records.length) return [];
     const keys = new Set();
@@ -115,7 +174,8 @@ function inferSchema(records) {
 router.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Falta el fitxer (camp "file")' });
     try {
-        const records = parseFile(req.file.buffer, req.file.originalname);
+        const raw = parseFile(req.file.buffer, req.file.originalname);
+        const records = flattenAll(raw);
         const schema = inferSchema(records);
         res.json({
             source: 'file',
@@ -296,7 +356,7 @@ async function handleFetch(req, res) {
 
         // Aplica data_path si donat
         const extracted = dataPath ? extractByPath(parsed, dataPath) : parsed;
-        const records = toArrayOfRecords(extracted);
+        const records = flattenAll(toArrayOfRecords(extracted));
         const schema = inferSchema(records);
 
         res.json({
@@ -327,31 +387,44 @@ router.post('/fetch-api', express.json({ limit: '10mb' }), (req, res) => {
 
 // =============================================================
 // GET /schema-bd?table=bienes
-// Retorna les columnes de la taula destí amb tipus PG (per al mapper).
+// Retorna columnes amb tipus PG. Sense `table` retorna TOTES les taules
+// whitelisted (per al mapper multi-taula).
 // =============================================================
 router.get('/schema-bd', async (req, res) => {
-    const table = (req.query.table || 'bienes').toString();
-    if (!ALLOWED_TABLES.includes(table)) {
+    const tableFilter = req.query.table?.toString();
+    if (tableFilter && !ALLOWED_TABLES.includes(tableFilter)) {
         return res.status(400).json({
             error: `Taula no permesa. Tria una de: ${ALLOWED_TABLES.join(', ')}`,
         });
     }
+    const tables = tableFilter ? [tableFilter] : ALLOWED_TABLES;
     try {
         const result = await db.query(`
-            SELECT column_name, data_type, is_nullable, column_default
+            SELECT table_name, column_name, data_type, is_nullable, column_default,
+                   ordinal_position
             FROM information_schema.columns
-            WHERE table_name = ?
-            ORDER BY ordinal_position
-        `, [table]);
-        const columns = result.rows.map(r => ({
-            name: r.column_name,
-            type: r.data_type,
-            nullable: r.is_nullable === 'YES',
-            has_default: r.column_default != null,
-            // No mostrem cap "primary key" → frontend els amaga del mapper
-            is_serial: r.column_default && String(r.column_default).startsWith('nextval'),
-        }));
-        res.json({ table, allowed_tables: ALLOWED_TABLES, columns });
+            WHERE table_name = ANY(?)
+            ORDER BY table_name, ordinal_position
+        `, [tables]);
+        const byTable = {};
+        for (const r of result.rows) {
+            const isSerial = r.column_default && String(r.column_default).startsWith('nextval');
+            if (!byTable[r.table_name]) byTable[r.table_name] = [];
+            byTable[r.table_name].push({
+                name: r.column_name,
+                qualified: `${r.table_name}.${r.column_name}`,
+                type: r.data_type,
+                nullable: r.is_nullable === 'YES',
+                has_default: r.column_default != null,
+                is_serial: isSerial,
+            });
+        }
+        res.json({
+            allowed_tables: ALLOWED_TABLES,
+            primary_table: 'bienes', // taula d'on surt el bien_id per a la resta
+            link_columns: { wikidata: 'bien_id', sipca: 'bien_id', imagenes: 'bien_id' },
+            tables: byTable,
+        });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -359,52 +432,97 @@ router.get('/schema-bd', async (req, res) => {
 
 // =============================================================
 // POST /transform-preview
-// Aplica un mapping { sourceField: targetColumn } a uns records i
-// retorna els 5 primers transformats + recompte d'errors per camp.
+// Aplica un mapping { sourceField: "table.column" } a uns records i
+// retorna els 5 primers transformats AGRUPATS per taula.
 // No toca BD: és un dry-run en memòria per validar el mapper.
 //
-// Body: { records: [...], mapping: { [src]: tgt }, table: 'bienes' }
+// Body: { records: [...], mapping: { [src]: "table.column" } }
+//   mapping pot tenir entrades sense punt → assumeix taula primary 'bienes'
+//   per backward-compat.
 // =============================================================
 router.post('/transform-preview', express.json({ limit: '10mb' }), async (req, res) => {
-    const { records = [], mapping = {}, table = 'bienes' } = req.body || {};
-    if (!ALLOWED_TABLES.includes(table)) {
-        return res.status(400).json({ error: 'Taula no permesa' });
-    }
+    const { records = [], mapping = {} } = req.body || {};
     if (!Array.isArray(records) || records.length === 0) {
         return res.status(400).json({ error: 'records buit o no és array' });
     }
-    // Carrega tipus de la taula per a casting
-    let columns = {};
+
+    // Normalitza mapping: { src: "table.col" } | { src: "col" → "bienes.col" }
+    const normalized = {};
+    for (const [src, tgt] of Object.entries(mapping)) {
+        if (!tgt || tgt === '__ignore__') continue;
+        const [table, ...rest] = tgt.includes('.') ? tgt.split('.') : ['bienes', tgt];
+        const column = rest.length ? rest.join('.') : tgt;
+        if (!ALLOWED_TABLES.includes(table)) {
+            return res.status(400).json({ error: `Taula no permesa: ${table}` });
+        }
+        normalized[src] = { table, column };
+    }
+
+    // Carrega tipus PG de totes les taules implicades
+    const tables = [...new Set(Object.values(normalized).map(t => t.table))];
+    let columnsByTable = {};
     try {
         const r = await db.query(
-            `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = ?`,
-            [table]
+            `SELECT table_name, column_name, data_type
+             FROM information_schema.columns
+             WHERE table_name = ANY(?)`,
+            [tables]
         );
-        columns = Object.fromEntries(r.rows.map(c => [c.column_name, c.data_type]));
+        for (const row of r.rows) {
+            if (!columnsByTable[row.table_name]) columnsByTable[row.table_name] = {};
+            columnsByTable[row.table_name][row.column_name] = row.data_type;
+        }
     } catch (e) {
         return res.status(500).json({ error: e.message });
     }
 
-    const errors = {};   // { columnName: nº de fallades }
+    const errors = {}; // { "table.column": nº de fallades }
     const transformed = records.slice(0, 5).map((row, idx) => {
-        const out = {};
-        for (const [src, tgt] of Object.entries(mapping)) {
-            if (!tgt || tgt === '__ignore__') continue;
+        const out = {}; // { bienes: {...}, wikidata: {...}, ... }
+        for (const [src, { table, column }] of Object.entries(normalized)) {
             const raw = row?.[src];
-            const cast = castValue(raw, columns[tgt]);
+            if (!out[table]) out[table] = {};
+
+            // Cas especial: metadata_externa (JSONB). Si l'usuari mapa
+            // `taula.metadata_externa` (sense subcol), tots aquests camps
+            // s'agrupen en un únic JSONB { source_field: value }.
+            if (column === 'metadata_externa' || column.startsWith('metadata_externa.')) {
+                const subKey = column === 'metadata_externa' ? src : column.slice('metadata_externa.'.length);
+                if (!out[table].metadata_externa) out[table].metadata_externa = {};
+                out[table].metadata_externa[subKey] = raw;
+                continue;
+            }
+
+            const pgType = columnsByTable[table]?.[column];
+            const cast = castValue(raw, pgType);
+            const key = `${table}.${column}`;
             if (cast.error) {
-                errors[tgt] = (errors[tgt] || 0) + 1;
-                if (idx === 0) out[tgt] = { __error__: cast.error, __raw__: raw };
-                else out[tgt] = null;
+                errors[key] = (errors[key] || 0) + 1;
+                if (idx === 0) out[table][column] = { __error__: cast.error, __raw__: raw };
+                else out[table][column] = null;
             } else {
-                out[tgt] = cast.value;
+                out[table][column] = cast.value;
             }
         }
         return out;
     });
 
-    res.json({ table, total_records: records.length, preview: transformed, errors });
+    res.json({
+        tables_used: tables,
+        primary_table: 'bienes',
+        total_records: records.length,
+        preview: transformed,
+        errors,
+    });
 });
+
+// Per passar valors a node-pg: objectes (JSONB) cal stringify manual
+function pgValue(v) {
+    if (v != null && typeof v === 'object' && !Array.isArray(v)) {
+        return JSON.stringify(v);
+    }
+    return v;
+}
 
 function castValue(raw, pgType) {
     if (raw == null || raw === '') return { value: null };
@@ -432,6 +550,441 @@ function castValue(raw, pgType) {
         return { error: e.message };
     }
 }
+
+// =============================================================
+// POST /match-candidates
+// Per cada record (ja transformat amb estructura { bienes: {...}, wikidata: {...} })
+// busca candidats existents a bienes amb 3 estratègies combinables.
+//
+// Body:
+//   { records: [{ bienes: {...}, wikidata: {...} }],
+//     fuente: 'HN',
+//     strategies: {
+//       code: true,                         // codigo_fuente exacte
+//       coords: { radius_m: 200 },          // Haversine
+//       name_muni: { similarity: 0.45 }     // pg_trgm + municipi
+//     } }
+//
+// Retorna: { results: [{ idx, suggested_action, suggested_candidate_id, candidates: [...] }] }
+// =============================================================
+router.post('/match-candidates', express.json({ limit: '10mb' }), async (req, res) => {
+    const { records = [], fuente, strategies = {} } = req.body || {};
+    if (!Array.isArray(records) || !records.length) {
+        return res.status(400).json({ error: 'records buit' });
+    }
+    const stratCode = strategies.code !== false;
+    const radius = strategies.coords?.radius_m || 200;
+    const useCoords = strategies.coords !== false;
+    const similarity = strategies.name_muni?.similarity ?? 0.45;
+    const useNameMuni = strategies.name_muni !== false;
+
+    try {
+        await ensureIntegrationTable();
+        const results = [];
+
+        // pg_trgm ha d'estar carregat (al inicializarTablas ja es fa CREATE EXTENSION unaccent;
+        // pg_trgm cal carregar-la per a similarity())
+        await db.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`, []).catch(() => {});
+
+        for (let i = 0; i < records.length; i++) {
+            const r = records[i] || {};
+            const b = r.bienes || {};
+            const candidatesById = new Map(); // dedup per bien_id
+
+            // 1) Codi extern
+            if (stratCode && b.codigo_fuente && fuente) {
+                const codeRes = await db.query(
+                    `SELECT id, denominacion, municipio, provincia, latitud, longitud,
+                            codigo_fuente, comunidad_autonoma
+                       FROM bienes WHERE codigo_fuente = ? LIMIT 5`,
+                    [String(b.codigo_fuente)]
+                );
+                for (const row of codeRes.rows) {
+                    candidatesById.set(row.id, {
+                        ...row, score: 1.0, strategy: 'code', distance_m: null,
+                    });
+                }
+            }
+
+            // 2) Coordenades (Haversine)
+            if (useCoords && typeof b.latitud === 'number' && typeof b.longitud === 'number') {
+                const lat = b.latitud, lng = b.longitud;
+                const dDeg = (radius / 1000) / 111.0 * 1.5; // buffer una mica generós per al bbox
+                const coordRes = await db.query(`
+                    SELECT id, denominacion, municipio, provincia, latitud, longitud,
+                           codigo_fuente, comunidad_autonoma,
+                           (6371000 * 2 * ASIN(SQRT(
+                               POWER(SIN(RADIANS((? - latitud)/2.0)), 2) +
+                               COS(RADIANS(latitud)) * COS(RADIANS(?)) *
+                               POWER(SIN(RADIANS((? - longitud)/2.0)), 2)
+                           ))) AS distance_m
+                      FROM bienes
+                     WHERE latitud BETWEEN ? AND ?
+                       AND longitud BETWEEN ? AND ?
+                       AND latitud IS NOT NULL AND longitud IS NOT NULL
+                     ORDER BY distance_m ASC
+                     LIMIT 10
+                `, [lat, lat, lng, lat - dDeg, lat + dDeg, lng - dDeg, lng + dDeg]);
+                for (const row of coordRes.rows) {
+                    if (row.distance_m > radius) continue;
+                    const score = Math.max(0.5, 1 - row.distance_m / radius);
+                    const prev = candidatesById.get(row.id);
+                    if (!prev || prev.score < score) {
+                        candidatesById.set(row.id, {
+                            ...row, score, strategy: prev ? `${prev.strategy}+coords` : 'coords',
+                            distance_m: Math.round(row.distance_m),
+                        });
+                    } else {
+                        prev.strategy = `${prev.strategy}+coords`;
+                        prev.distance_m = Math.round(row.distance_m);
+                    }
+                }
+            }
+
+            // 3) Nom + municipi (similarity)
+            if (useNameMuni && b.denominacion && b.municipio) {
+                const nameRes = await db.query(`
+                    SELECT id, denominacion, municipio, provincia, latitud, longitud,
+                           codigo_fuente, comunidad_autonoma,
+                           similarity(unaccent(denominacion), unaccent(?)) AS sim
+                      FROM bienes
+                     WHERE unaccent(municipio) ILIKE unaccent(?)
+                       AND similarity(unaccent(denominacion), unaccent(?)) > ?
+                     ORDER BY sim DESC
+                     LIMIT 10
+                `, [String(b.denominacion), String(b.municipio), String(b.denominacion), similarity]);
+                for (const row of nameRes.rows) {
+                    const score = row.sim;
+                    const prev = candidatesById.get(row.id);
+                    if (!prev || prev.score < score) {
+                        candidatesById.set(row.id, {
+                            ...row, score,
+                            strategy: prev ? `${prev.strategy}+name_muni` : 'name_muni',
+                        });
+                    } else {
+                        prev.strategy = `${prev.strategy}+name_muni`;
+                    }
+                }
+            }
+
+            const candidates = [...candidatesById.values()]
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5);
+
+            // Acció suggerida
+            let suggested_action = 'INSERT';
+            let suggested_candidate_id = null;
+            if (candidates.length) {
+                suggested_candidate_id = candidates[0].id;
+                suggested_action = candidates[0].score >= 0.9 ? 'UPDATE' : 'REVIEW';
+            }
+            results.push({ idx: i, suggested_action, suggested_candidate_id, candidates });
+        }
+
+        res.json({
+            total: results.length,
+            with_candidates: results.filter(r => r.candidates.length > 0).length,
+            results,
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message, stack: e.stack });
+    }
+});
+
+// =============================================================
+// POST /dry-run
+// Simula què passaria amb les decisions de l'usuari (sense tocar BD).
+//
+// Body:
+//   { records: [...transformed],
+//     decisions: [{ idx, action: 'INSERT'|'UPDATE'|'LINK'|'SKIP',
+//                   target_bien_id?, field_choices: { 'tabla.col': 'origen'|'bd'|<text> } }],
+//     fuente: 'HN' }
+//
+// Retorna: { summary, per_row: [{ idx, action, sql_summary, conflicts }] }
+// =============================================================
+router.post('/dry-run', express.json({ limit: '10mb' }), async (req, res) => {
+    const { records = [], decisions = [], fuente } = req.body || {};
+    if (!Array.isArray(decisions)) return res.status(400).json({ error: 'decisions requerit' });
+
+    try {
+        const summary = { INSERT: 0, UPDATE: 0, LINK: 0, SKIP: 0, errors: 0 };
+        const per_row = [];
+
+        for (const dec of decisions) {
+            const rec = records[dec.idx] || {};
+            const tablesAffected = Object.keys(rec).filter(t => Object.keys(rec[t] || {}).length);
+
+            if (dec.action === 'SKIP') {
+                summary.SKIP++;
+                per_row.push({ idx: dec.idx, action: 'SKIP', tables: [] });
+                continue;
+            }
+
+            if (dec.action === 'LINK') {
+                if (!dec.target_bien_id) {
+                    summary.errors++;
+                    per_row.push({ idx: dec.idx, action: 'LINK', error: 'Falta target_bien_id' });
+                    continue;
+                }
+                summary.LINK++;
+                per_row.push({
+                    idx: dec.idx, action: 'LINK', bien_id: dec.target_bien_id,
+                    tables: ['integration_matches'],
+                });
+                continue;
+            }
+
+            if (dec.action === 'INSERT') {
+                if (!rec.bienes || !rec.bienes.denominacion) {
+                    summary.errors++;
+                    per_row.push({ idx: dec.idx, action: 'INSERT', error: 'Falta denominacion a bienes' });
+                    continue;
+                }
+                summary.INSERT++;
+                per_row.push({
+                    idx: dec.idx, action: 'INSERT', tables: tablesAffected,
+                    fields_inserted: Object.fromEntries(tablesAffected.map(t => [t, Object.keys(rec[t])])),
+                });
+                continue;
+            }
+
+            if (dec.action === 'UPDATE') {
+                if (!dec.target_bien_id) {
+                    summary.errors++;
+                    per_row.push({ idx: dec.idx, action: 'UPDATE', error: 'Falta target_bien_id' });
+                    continue;
+                }
+                // Llegeix valors actuals per veure el diff
+                const cur = await db.query('SELECT * FROM bienes WHERE id = ?', [dec.target_bien_id]);
+                if (!cur.rows.length) {
+                    summary.errors++;
+                    per_row.push({ idx: dec.idx, action: 'UPDATE', error: `bien_id ${dec.target_bien_id} no existeix` });
+                    continue;
+                }
+                // Aplica field_choices: 'origen' → valor de rec[table][col], 'bd' → mantenir
+                const choices = dec.field_choices || {};
+                const changes = {};
+                for (const [key, choice] of Object.entries(choices)) {
+                    if (!choice || choice === 'bd') continue;
+                    const [table, col] = key.split('.');
+                    const origVal = rec[table]?.[col];
+                    let newVal;
+                    if (choice === 'origen') newVal = origVal;
+                    else newVal = choice; // manual
+                    if (!changes[table]) changes[table] = {};
+                    changes[table][col] = newVal;
+                }
+                summary.UPDATE++;
+                per_row.push({
+                    idx: dec.idx, action: 'UPDATE', bien_id: dec.target_bien_id,
+                    changes,
+                    tables: Object.keys(changes),
+                });
+                continue;
+            }
+
+            summary.errors++;
+            per_row.push({ idx: dec.idx, error: `Acció desconeguda: ${dec.action}` });
+        }
+        res.json({ summary, total_decisions: decisions.length, fuente: fuente || null, per_row });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// =============================================================
+// POST /apply
+// Executa realment les decisions a la BD dins UNA transacció.
+// Requereix { confirm: true } per evitar disparar per error.
+// Cada modificació es registra a integration_matches per a auditoria.
+// =============================================================
+router.post('/apply', express.json({ limit: '10mb' }), async (req, res) => {
+    const { records = [], decisions = [], fuente, confirm } = req.body || {};
+    if (confirm !== true) {
+        return res.status(400).json({ error: 'Falta confirm=true. Aplicació no executada per seguretat.' });
+    }
+    if (!fuente) return res.status(400).json({ error: 'Falta fuente (etiqueta de procedència)' });
+    if (!decisions.length) return res.status(400).json({ error: 'decisions buit' });
+
+    try {
+        await ensureIntegrationTable();
+
+        const result = await db.transaction(async (client) => {
+            const summary = { INSERT: 0, UPDATE: 0, LINK: 0, SKIP: 0 };
+            const applied = [];
+
+            for (const dec of decisions) {
+                const rec = records[dec.idx] || {};
+                const codigoExt = rec.bienes?.codigo_fuente || null;
+
+                if (dec.action === 'SKIP') {
+                    summary.SKIP++;
+                    await client.query(
+                        `INSERT INTO integration_matches (bien_id, fuente, codigo_externo, accion)
+                         VALUES ($1, $2, $3, 'SKIP')`,
+                        [dec.target_bien_id || null, fuente, codigoExt]
+                    );
+                    continue;
+                }
+
+                if (dec.action === 'LINK') {
+                    summary.LINK++;
+                    await client.query(
+                        `INSERT INTO integration_matches (bien_id, fuente, codigo_externo, accion)
+                         VALUES ($1, $2, $3, 'LINK')`,
+                        [dec.target_bien_id, fuente, codigoExt]
+                    );
+                    applied.push({ idx: dec.idx, action: 'LINK', bien_id: dec.target_bien_id });
+                    continue;
+                }
+
+                if (dec.action === 'INSERT') {
+                    const bienes = rec.bienes || {};
+                    const cols = Object.keys(bienes).filter(c => bienes[c] !== undefined);
+                    if (!cols.length || !bienes.denominacion) {
+                        throw new Error(`row ${dec.idx}: INSERT sense denominacion`);
+                    }
+                    const placeholders = cols.map((_, i) => `$${i + 1}`).join(',');
+                    const ins = await client.query(
+                        `INSERT INTO bienes (${cols.join(',')}) VALUES (${placeholders}) RETURNING id`,
+                        cols.map(c => pgValue(bienes[c]))
+                    );
+                    const newId = ins.rows[0].id;
+
+                    // Tables secundàries (wikidata, sipca, imagenes) si tenen camps
+                    const linkCols = { wikidata: 'bien_id', sipca: 'bien_id', imagenes: 'bien_id' };
+                    for (const [table, fk] of Object.entries(linkCols)) {
+                        const block = rec[table];
+                        if (!block || !Object.keys(block).length) continue;
+                        const c2 = Object.keys(block);
+                        const p2 = c2.map((_, i) => `$${i + 2}`).join(',');
+                        await client.query(
+                            `INSERT INTO ${table} (${fk}, ${c2.join(',')}) VALUES ($1, ${p2})`,
+                            [newId, ...c2.map(c => pgValue(block[c]))]
+                        );
+                    }
+
+                    await client.query(
+                        `INSERT INTO integration_matches
+                         (bien_id, fuente, codigo_externo, accion, campos_modificados)
+                         VALUES ($1, $2, $3, 'INSERT', $4)`,
+                        [newId, fuente, codigoExt, JSON.stringify(rec)]
+                    );
+                    summary.INSERT++;
+                    applied.push({ idx: dec.idx, action: 'INSERT', bien_id: newId });
+                    continue;
+                }
+
+                if (dec.action === 'UPDATE') {
+                    if (!dec.target_bien_id) throw new Error(`row ${dec.idx}: UPDATE sense target_bien_id`);
+                    const choices = dec.field_choices || {};
+                    const changes = {};
+                    for (const [key, choice] of Object.entries(choices)) {
+                        if (!choice || choice === 'bd') continue;
+                        const [table, col] = key.split('.');
+                        const newVal = choice === 'origen' ? rec[table]?.[col] : choice;
+                        if (!changes[table]) changes[table] = {};
+                        changes[table][col] = newVal;
+                    }
+
+                    // Llegeix valors anteriors per a rollback
+                    const prev = await client.query('SELECT * FROM bienes WHERE id = $1', [dec.target_bien_id]);
+                    const prevRow = prev.rows[0] || {};
+                    const valoresAnt = {};
+                    if (changes.bienes) {
+                        for (const c of Object.keys(changes.bienes)) valoresAnt[`bienes.${c}`] = prevRow[c];
+                    }
+
+                    // UPDATE bienes
+                    if (changes.bienes && Object.keys(changes.bienes).length) {
+                        const sets = Object.keys(changes.bienes).map((c, i) => `${c} = $${i + 1}`).join(', ');
+                        const params = [...Object.values(changes.bienes).map(pgValue), dec.target_bien_id];
+                        await client.query(
+                            `UPDATE bienes SET ${sets}, updated_at = NOW() WHERE id = $${params.length}`,
+                            params
+                        );
+                    }
+
+                    // UPSERT sobre taules secundàries (wikidata, sipca)
+                    for (const table of ['wikidata', 'sipca']) {
+                        if (!changes[table]) continue;
+                        const c2 = Object.keys(changes[table]);
+                        const sets = c2.map((c, i) => `${c} = $${i + 2}`).join(', ');
+                        const exists = await client.query(`SELECT 1 FROM ${table} WHERE bien_id = $1`, [dec.target_bien_id]);
+                        if (exists.rows.length) {
+                            await client.query(
+                                `UPDATE ${table} SET ${sets} WHERE bien_id = $1`,
+                                [dec.target_bien_id, ...c2.map(c => pgValue(changes[table][c]))]
+                            );
+                        } else {
+                            const ph = c2.map((_, i) => `$${i + 2}`).join(',');
+                            await client.query(
+                                `INSERT INTO ${table} (bien_id, ${c2.join(',')}) VALUES ($1, ${ph})`,
+                                [dec.target_bien_id, ...c2.map(c => pgValue(changes[table][c]))]
+                            );
+                        }
+                    }
+
+                    await client.query(
+                        `INSERT INTO integration_matches
+                         (bien_id, fuente, codigo_externo, accion, tabla, campos_modificados, valores_anteriors)
+                         VALUES ($1, $2, $3, 'UPDATE', 'multi', $4, $5)`,
+                        [dec.target_bien_id, fuente, codigoExt,
+                         JSON.stringify(changes), JSON.stringify(valoresAnt)]
+                    );
+                    summary.UPDATE++;
+                    applied.push({ idx: dec.idx, action: 'UPDATE', bien_id: dec.target_bien_id });
+                }
+            }
+            return { summary, applied };
+        });
+
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        console.error('[Integraciones /apply] ROLLBACK:', e.message);
+        res.status(500).json({ error: e.message, rolled_back: true });
+    }
+});
+
+// =============================================================
+// GET /sample-monument
+// Retorna un bé real amb totes les taules joined, perquè l'usuari pugui
+// veure quina info hi va a cada camp (per a mappings manuals informats).
+// Tria un bien que tingui més registres complerts.
+// =============================================================
+router.get('/sample-monument', async (req, res) => {
+    try {
+        const r = await db.query(`
+            SELECT b.id FROM bienes b
+            JOIN wikidata w ON w.bien_id = b.id AND w.qid IS NOT NULL
+                            AND w.descripcion IS NOT NULL AND w.estilo IS NOT NULL
+            LEFT JOIN sipca s ON s.bien_id = b.id
+            LEFT JOIN imagenes i ON i.bien_id = b.id
+            WHERE b.denominacion IS NOT NULL AND b.municipio IS NOT NULL
+              AND b.latitud IS NOT NULL AND w.arquitecto IS NOT NULL
+              AND w.heritage_label IS NOT NULL
+            ORDER BY b.id LIMIT 1
+        `, []);
+        if (!r.rows.length) return res.status(404).json({ error: 'Cap bien amb totes les taules complertes' });
+        const bid = r.rows[0].id;
+        const [bienes, wikidata, sipca, imagenes] = await Promise.all([
+            db.query('SELECT * FROM bienes WHERE id = ?', [bid]),
+            db.query('SELECT * FROM wikidata WHERE bien_id = ?', [bid]),
+            db.query('SELECT * FROM sipca WHERE bien_id = ?', [bid]),
+            db.query('SELECT * FROM imagenes WHERE bien_id = ? LIMIT 3', [bid]),
+        ]);
+        res.json({
+            bien_id: bid,
+            bienes: bienes.rows[0] || null,
+            wikidata: wikidata.rows[0] || null,
+            sipca: sipca.rows[0] || null,
+            imagenes: imagenes.rows,
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // =============================================================
 // GET /health
