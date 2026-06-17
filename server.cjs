@@ -2013,6 +2013,7 @@ REGLAS:
         // recuerde el contexto (ej. "voy con camper" tras una pregunta sobre
         // ruta románica → debe mantener "ruta románica", no preguntar desde cero).
         // Solo aceptamos roles válidos y filtramos system/error/tool del frontend.
+        // Sanititza historial: només role + content (cap reasoning del client)
         ...historial
             .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
             .filter(m => typeof m.content === 'string' && m.content.trim().length > 0)
@@ -2031,7 +2032,17 @@ REGLAS:
         const result = await llamarGroqRaw(messages, true);
         totalTokensIn += result.usage?.prompt_tokens || 0;
         totalTokensOut += result.usage?.completion_tokens || 0;
-        const msg = result.choices[0].message;
+        const raw = result.choices[0].message;
+        // Sanititza: alguns models (DeepSeek R1, gpt-oss-120b) retornen camps
+        // 'reasoning' o 'reasoning_content' que el següent torn no accepta.
+        // Només re-enviem els camps estàndard de l'OpenAI chat API.
+        const msg = {
+            role: raw.role,
+            content: raw.content ?? null,
+            ...(raw.tool_calls ? { tool_calls: raw.tool_calls } : {}),
+            ...(raw.name ? { name: raw.name } : {}),
+            ...(raw.tool_call_id ? { tool_call_id: raw.tool_call_id } : {}),
+        };
         messages.push(msg);
 
         if (!msg.tool_calls || msg.tool_calls.length === 0) {
