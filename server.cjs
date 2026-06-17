@@ -238,6 +238,20 @@ app.use('/api/auth/forgot-password', authLimiter);
 
 app.use(express.json());
 
+// ============== ADMIN INTEGRACIONES (localhost only) ==============
+// El router està al repo i desplegat però bloquejat per middleware si la
+// request no ve de localhost amb header `X-Local-Mode: true`.
+try {
+    const integracionesRouter = require('./admin/integraciones/router.cjs');
+    app.use('/api/admin/integraciones', integracionesRouter);
+    console.log('[Integraciones] Endpoint registrat (només accessible des de localhost)');
+} catch (e) {
+    if (e.code !== 'MODULE_NOT_FOUND') {
+        console.error('[Integraciones] Error al carregar:', e.message);
+    }
+    // MODULE_NOT_FOUND → simplement no hi és, sense soroll
+}
+
 // ============== CLASIFICACION DE MONUMENTOS ==============
 
 const CLASIFICACION_GRUPOS = {
