@@ -465,6 +465,25 @@ async function inicializarTablas() {
         await pool.query(`ALTER TABLE wikidata ADD COLUMN IF NOT EXISTS metadata_externa JSONB`);
     } catch (e) { /* columns may already exist */ }
 
+    // denominaciones_alternativas — sinònims, multi-idioma, noms UNESCO/popular
+    // El chat hi busca via JOIN, així que ha d'existir sempre.
+    try {
+        await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS denominaciones_alternativas (
+                id SERIAL PRIMARY KEY,
+                bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+                denominacion TEXT NOT NULL,
+                idioma TEXT, fuente TEXT,
+                es_principal BOOLEAN DEFAULT false,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE(bien_id, denominacion)
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_denom_alt_bien ON denominaciones_alternativas(bien_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_denom_alt_trgm ON denominaciones_alternativas USING gin (denominacion gin_trgm_ops)`);
+    } catch (e) { /* may already exist */ }
+
     _initialized = true;
 }
 

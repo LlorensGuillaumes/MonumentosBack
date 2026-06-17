@@ -1011,6 +1011,10 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
         }) AS t(id, sim)`;
     }
 
+    // Match a denominaciones_alternativas (sinònims afegits al Comparator
+    // o via bulk-seed: nom popular, oficial UNESCO, multi-idioma...)
+    const altConds = palabras.map((_, i) => `da.denominacion ILIKE $${i + 1}`).join(' OR ');
+
     const r = await db.query(`
         WITH matches AS (
             -- Match en denominación (peso alto via similarity real)
@@ -1026,6 +1030,12 @@ async function buscarMonumentosRelevantes(question, limit = 5) {
                    GREATEST(similarity(LOWER(bp.nombre), LOWER($${qParamIdx})), 0.4) AS sim,
                    'persona' AS via
             FROM bien_personas bp WHERE ${personaConds}
+            UNION
+            -- Match en denominaciones_alternativas (sinònims/UNESCO/multi-idioma)
+            SELECT da.bien_id AS id,
+                   GREATEST(similarity(LOWER(da.denominacion), LOWER($${qParamIdx})), 0.45) AS sim,
+                   'altname' AS via
+            FROM denominaciones_alternativas da WHERE ${altConds}
             ${aliasUnion}
         ),
         -- Bonus: si un bien aparece en múltiples fuentes, sumar score
@@ -1151,6 +1161,11 @@ const CHAT_TOOLS = [
                     parte_de: { type: 'string', description: 'Conjunto al que pertenece (Camino de Santiago, Red Natura 2000, etc.)' },
                     propietario: { type: 'string' },
                     heritage_world: { type: 'string', enum: ['unesco', 'european'], description: 'unesco = Patrimonio Mundial UNESCO; european = European Heritage Label' },
+                    hispania_nostra: {
+                        type: 'string',
+                        enum: ['cualquiera', 'roja', 'verde', 'negra'],
+                        description: 'Filtra por catálogo Hispania Nostra: "cualquiera" = en cualquier lista HN, "roja" = Lista Roja (en riesgo), "verde" = Lista Verde (recuperado), "negra" = Lista Negra (perdido). Úsalo cuando el usuario mencione Hispania Nostra, "lista roja", "patrimonio en riesgo", "monumentos perdidos", "monumentos recuperados".',
+                    },
                     limit: { type: 'integer', description: 'Máximo de resultados (1-15)', default: 10 },
                 },
                 required: [],
@@ -1284,6 +1299,20 @@ async function toolBuscarPorFiltros(args) {
     if (args.parte_de) { filtros.push(`LOWER(w.parte_de) LIKE $${p++}`); params.push(`%${args.parte_de.toLowerCase()}%`); }
     if (args.propietario) { filtros.push(`LOWER(w.propietario) LIKE $${p++}`); params.push(`%${args.propietario.toLowerCase()}%`); }
 
+    // Filtre Hispania Nostra (cualquiera | roja | verde | negra)
+    if (args.hispania_nostra) {
+        const cond = {
+            roja: `(w.heritage_label ILIKE '%lista roja%' OR b.tipo ILIKE '%lista roja%' OR b.categoria ILIKE '%lista roja%')`,
+            verde: `(w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%' OR b.tipo ILIKE '%lista verde%' OR b.categoria ILIKE '%lista verde%')`,
+            negra: `(w.heritage_label ILIKE '%lista negra%' OR b.tipo ILIKE '%lista negra%' OR b.categoria ILIKE '%lista negra%')`,
+        };
+        if (args.hispania_nostra === 'cualquiera') {
+            filtros.push(`(${cond.roja} OR ${cond.verde} OR ${cond.negra})`);
+        } else if (cond[args.hispania_nostra]) {
+            filtros.push(cond[args.hispania_nostra]);
+        }
+    }
+
     if (filtros.length === 0) return { error: 'Sin filtros, especifica al menos uno.' };
 
     // Si NO se pidió tipo_monumento explícito, ocultar marcados excluir_chat.
@@ -1294,7 +1323,13 @@ async function toolBuscarPorFiltros(args) {
     const sql = `
         SELECT b.id, b.denominacion, b.municipio, b.provincia, b.pais,
                b.tipo_monumento, b.periodo, w.estilo, w.inception, w.religion,
-               w.dedicado_a, b.heritage_world, w.heritage_label, w.wikipedia_url
+               w.dedicado_a, b.heritage_world, w.heritage_label, w.wikipedia_url,
+               CASE
+                   WHEN w.heritage_label ILIKE '%lista roja%' OR b.tipo ILIKE '%lista roja%' OR b.categoria ILIKE '%lista roja%' THEN 'roja'
+                   WHEN w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%' OR b.tipo ILIKE '%lista verde%' OR b.categoria ILIKE '%lista verde%' THEN 'verde'
+                   WHEN w.heritage_label ILIKE '%lista negra%' OR b.tipo ILIKE '%lista negra%' OR b.categoria ILIKE '%lista negra%' THEN 'negra'
+                   ELSE NULL
+               END AS hn_lista
         FROM bienes b LEFT JOIN wikidata w ON b.id = w.bien_id
         WHERE ${filtros.join(' AND ')}
         ORDER BY
@@ -1940,7 +1975,9 @@ function rankearFuentes(allMonumentos, answerText) {
 }
 
 async function chatConToolUse(question, modoUsuario = 'descubre', historial = []) {
-    const systemPrompt = `Eres un asistente experto en patrimonio histórico europeo (316k monumentos en España, Italia, Francia, Portugal). Tienes 7 tools: buscar_cercanos_a (monumentos en radio desde un centro — ÚSALA SIEMPRE para viajes), buscar_por_filtros (tipo, periodo, religión, UNESCO…), buscar_por_persona (arquitectos/escultores), buscar_por_texto (fuzzy nombre+ubicación), buscar_por_descripcion (texto Wikipedia — para comarcas catalanas y conceptos no estructurados), buscar_rutas (rutas culturales temáticas), info_monumento (ficha de UN id).
+    const systemPrompt = `Eres un asistente experto en patrimonio histórico europeo (316k monumentos en España, Italia, Francia, Portugal). Tienes 7 tools: buscar_cercanos_a (monumentos en radio desde un centro — ÚSALA SIEMPRE para viajes), buscar_por_filtros (tipo, periodo, religión, UNESCO, **Hispania Nostra (lista roja/verde/negra)**…), buscar_por_persona (arquitectos/escultores), buscar_por_texto (fuzzy nombre+ubicación), buscar_por_descripcion (texto Wikipedia — para comarcas catalanas y conceptos no estructurados), buscar_rutas (rutas culturales temáticas), info_monumento (ficha de UN id).
+
+NOTA HISPANIA NOSTRA: si el usuario menciona "Hispania Nostra", "lista roja", "patrimonio en riesgo", "monumentos perdidos" o "monumentos recuperados", llama buscar_por_filtros con hispania_nostra="roja"|"verde"|"negra"|"cualquiera" (combínalo con region/provincia si se mencionan). En la respuesta, etiqueta cada monumento con su lista (🔴 Roja / 🟢 Verde / ⚫ Negra) usando el campo hn_lista.
 
 REGLAS:
 
@@ -2592,7 +2629,7 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.q) {
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                // Buscar también en bien_aliases (BD search) para nombres alternativos
+                // 1) bien_aliases (BD search externa, si està configurada)
                 let aliasBienIds = [];
                 const searchPool = db.getSearchPool && db.getSearchPool();
                 if (searchPool) {
@@ -2605,9 +2642,21 @@ app.get('/api/monumentos', async (req, res) => {
                         aliasBienIds = r.rows.map(x => x.bien_id);
                     } catch (e) { console.error('alias search:', e.message); }
                 }
-                if (aliasBienIds.length > 0) {
+                // 2) denominaciones_alternativas (Comparator/Integraciones)
+                let altBienIds = [];
+                try {
+                    const r = await db.query(
+                        `SELECT DISTINCT bien_id FROM denominaciones_alternativas
+                         WHERE unaccent(LOWER(denominacion)) ILIKE unaccent(LOWER(?)) LIMIT 200`,
+                        [`%${qTokenized}%`]
+                    );
+                    altBienIds = r.rows.map(x => x.bien_id);
+                } catch (e) { console.error('alt search:', e.message); }
+
+                const unionIds = [...new Set([...aliasBienIds, ...altBienIds])];
+                if (unionIds.length > 0) {
                     where.push(`(unaccent(b.denominacion) ILIKE unaccent($${pi}) OR b.id = ANY($${pi + 1}::int[]))`);
-                    params.push(`%${qTokenized}%`, aliasBienIds);
+                    params.push(`%${qTokenized}%`, unionIds);
                     pi += 2;
                 } else {
                     where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
@@ -3005,7 +3054,7 @@ app.get('/api/geojson', async (req, res) => {
         if (req.query.q) {
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                // Buscar también en bien_aliases (BD search) para nombres alternativos
+                // 1) bien_aliases (BD search externa, si està configurada)
                 let aliasBienIds = [];
                 const searchPool = db.getSearchPool && db.getSearchPool();
                 if (searchPool) {
@@ -3018,9 +3067,21 @@ app.get('/api/geojson', async (req, res) => {
                         aliasBienIds = r.rows.map(x => x.bien_id);
                     } catch (e) { console.error('alias search:', e.message); }
                 }
-                if (aliasBienIds.length > 0) {
+                // 2) denominaciones_alternativas (Comparator/Integraciones)
+                let altBienIds = [];
+                try {
+                    const r = await db.query(
+                        `SELECT DISTINCT bien_id FROM denominaciones_alternativas
+                         WHERE unaccent(LOWER(denominacion)) ILIKE unaccent(LOWER(?)) LIMIT 200`,
+                        [`%${qTokenized}%`]
+                    );
+                    altBienIds = r.rows.map(x => x.bien_id);
+                } catch (e) { console.error('alt search:', e.message); }
+
+                const unionIds = [...new Set([...aliasBienIds, ...altBienIds])];
+                if (unionIds.length > 0) {
                     where.push(`(unaccent(b.denominacion) ILIKE unaccent($${pi}) OR b.id = ANY($${pi + 1}::int[]))`);
-                    params.push(`%${qTokenized}%`, aliasBienIds);
+                    params.push(`%${qTokenized}%`, unionIds);
                     pi += 2;
                 } else {
                     where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);

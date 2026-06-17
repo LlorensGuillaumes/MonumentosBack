@@ -29,6 +29,7 @@ const router = express.Router();
 let _tableReady = false;
 async function ensureIntegrationTable() {
     if (_tableReady) return;
+    await db.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`, []).catch(() => {});
     await db.query(`
         CREATE TABLE IF NOT EXISTS integration_matches (
             id SERIAL PRIMARY KEY,
@@ -46,6 +47,20 @@ async function ensureIntegrationTable() {
         CREATE INDEX IF NOT EXISTS idx_intmatch_bien ON integration_matches(bien_id);
         CREATE INDEX IF NOT EXISTS idx_intmatch_fuente ON integration_matches(fuente);
         CREATE INDEX IF NOT EXISTS idx_intmatch_codigo ON integration_matches(fuente, codigo_externo);
+
+        CREATE TABLE IF NOT EXISTS denominaciones_alternativas (
+            id SERIAL PRIMARY KEY,
+            bien_id INTEGER NOT NULL REFERENCES bienes(id) ON DELETE CASCADE,
+            denominacion TEXT NOT NULL,
+            idioma TEXT,
+            fuente TEXT,
+            es_principal BOOLEAN DEFAULT false,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(bien_id, denominacion)
+        );
+        CREATE INDEX IF NOT EXISTS idx_denom_alt_bien ON denominaciones_alternativas(bien_id);
+        CREATE INDEX IF NOT EXISTS idx_denom_alt_trgm
+            ON denominaciones_alternativas USING gin (denominacion gin_trgm_ops);
     `, []);
     _tableReady = true;
 }
@@ -667,6 +682,36 @@ router.post('/match-candidates', express.json({ limit: '10mb' }), async (req, re
                 }
             }
 
+            // 4) Denominacions alternatives (sinònims, multi-idioma)
+            if (useNameMuni && b.denominacion) {
+                const altRes = await db.query(`
+                    SELECT b.id, b.denominacion, b.municipio, b.provincia,
+                           b.latitud, b.longitud, b.codigo_fuente, b.comunidad_autonoma,
+                           da.denominacion AS alt_match,
+                           similarity(unaccent(da.denominacion), unaccent(?)) AS sim
+                      FROM denominaciones_alternativas da
+                      JOIN bienes b ON b.id = da.bien_id
+                     WHERE similarity(unaccent(da.denominacion), unaccent(?)) > ?
+                     ORDER BY sim DESC
+                     LIMIT 10
+                `, [String(b.denominacion), String(b.denominacion), similarity]);
+                for (const row of altRes.rows) {
+                    // Score lleugerament reduït vs nom directe (és coincidència via alies)
+                    const score = row.sim * 0.95;
+                    const prev = candidatesById.get(row.id);
+                    if (!prev || prev.score < score) {
+                        candidatesById.set(row.id, {
+                            ...row, score,
+                            strategy: prev ? `${prev.strategy}+altname` : 'altname',
+                            alt_match: row.alt_match,
+                        });
+                    } else {
+                        prev.strategy = `${prev.strategy}+altname`;
+                        prev.alt_match = row.alt_match;
+                    }
+                }
+            }
+
             const candidates = [...candidatesById.values()]
                 .sort((a, b) => b.score - a.score)
                 .slice(0, 5);
@@ -762,24 +807,31 @@ router.post('/dry-run', express.json({ limit: '10mb' }), async (req, res) => {
                     per_row.push({ idx: dec.idx, action: 'UPDATE', error: `bien_id ${dec.target_bien_id} no existeix` });
                     continue;
                 }
-                // Aplica field_choices: 'origen' → valor de rec[table][col], 'bd' → mantenir
                 const choices = dec.field_choices || {};
                 const changes = {};
+                const altNames = [];
+                const concats = [];
                 for (const [key, choice] of Object.entries(choices)) {
                     if (!choice || choice === 'bd') continue;
                     const [table, col] = key.split('.');
                     const origVal = rec[table]?.[col];
-                    let newVal;
-                    if (choice === 'origen') newVal = origVal;
-                    else newVal = choice; // manual
+                    if (choice === 'altname') {
+                        if (col === 'denominacion' && origVal) altNames.push(origVal);
+                        continue;
+                    }
+                    if (choice === 'concat') {
+                        if (origVal) concats.push({ field: key, new: origVal });
+                        continue;
+                    }
+                    const newVal = choice === 'origen' ? origVal : choice;
                     if (!changes[table]) changes[table] = {};
                     changes[table][col] = newVal;
                 }
                 summary.UPDATE++;
                 per_row.push({
                     idx: dec.idx, action: 'UPDATE', bien_id: dec.target_bien_id,
-                    changes,
-                    tables: Object.keys(changes),
+                    changes, alt_names: altNames, concats,
+                    tables: [...new Set([...Object.keys(changes), ...(altNames.length ? ['denominaciones_alternativas'] : []), ...concats.map(c => c.field.split('.')[0])])],
                 });
                 continue;
             }
@@ -880,10 +932,27 @@ router.post('/apply', express.json({ limit: '10mb' }), async (req, res) => {
                     if (!dec.target_bien_id) throw new Error(`row ${dec.idx}: UPDATE sense target_bien_id`);
                     const choices = dec.field_choices || {};
                     const changes = {};
+                    const altNamesToAdd = []; // { denominacion }
+                    const concatOps = []; // { table, col, newVal }
                     for (const [key, choice] of Object.entries(choices)) {
                         if (!choice || choice === 'bd') continue;
                         const [table, col] = key.split('.');
-                        const newVal = choice === 'origen' ? rec[table]?.[col] : choice;
+                        const origVal = rec[table]?.[col];
+
+                        if (choice === 'altname') {
+                            // Només sentit per a denominacion. Preserva BD + afegeix alternativa.
+                            if (col === 'denominacion' && origVal != null && String(origVal).trim()) {
+                                altNamesToAdd.push(String(origVal).trim());
+                            }
+                            continue;
+                        }
+                        if (choice === 'concat') {
+                            if (origVal != null && String(origVal).trim()) {
+                                concatOps.push({ table, col, newVal: String(origVal).trim() });
+                            }
+                            continue;
+                        }
+                        const newVal = choice === 'origen' ? origVal : choice;
                         if (!changes[table]) changes[table] = {};
                         changes[table][col] = newVal;
                     }
@@ -926,15 +995,40 @@ router.post('/apply', express.json({ limit: '10mb' }), async (req, res) => {
                         }
                     }
 
+                    // Concat: per cada camp marcat, append text amb separador.
+                    for (const op of concatOps) {
+                        await client.query(
+                            `UPDATE ${op.table}
+                                SET ${op.col} = CASE
+                                    WHEN ${op.col} IS NULL OR ${op.col} = ''
+                                        THEN $1
+                                    ELSE ${op.col} || E'\\n\\n' || $1
+                                END
+                              WHERE ${op.table === 'bienes' ? 'id' : 'bien_id'} = $2`,
+                            [op.newVal, dec.target_bien_id]
+                        );
+                    }
+
+                    // Alternativas: afegeix noves denominacions sense modificar bienes
+                    for (const denom of altNamesToAdd) {
+                        await client.query(
+                            `INSERT INTO denominaciones_alternativas (bien_id, denominacion, fuente)
+                             VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                            [dec.target_bien_id, denom, fuente]
+                        );
+                    }
+
                     await client.query(
                         `INSERT INTO integration_matches
                          (bien_id, fuente, codigo_externo, accion, tabla, campos_modificados, valores_anteriors)
                          VALUES ($1, $2, $3, 'UPDATE', 'multi', $4, $5)`,
                         [dec.target_bien_id, fuente, codigoExt,
-                         JSON.stringify(changes), JSON.stringify(valoresAnt)]
+                         JSON.stringify({ ...changes, ...(altNamesToAdd.length && { _alt_names: altNamesToAdd }), ...(concatOps.length && { _concat: concatOps }) }),
+                         JSON.stringify(valoresAnt)]
                     );
                     summary.UPDATE++;
-                    applied.push({ idx: dec.idx, action: 'UPDATE', bien_id: dec.target_bien_id });
+                    applied.push({ idx: dec.idx, action: 'UPDATE', bien_id: dec.target_bien_id,
+                                   alt_names: altNamesToAdd.length, concat: concatOps.length });
                 }
             }
             return { summary, applied };
@@ -944,6 +1038,277 @@ router.post('/apply', express.json({ limit: '10mb' }), async (req, res) => {
     } catch (e) {
         console.error('[Integraciones /apply] ROLLBACK:', e.message);
         res.status(500).json({ error: e.message, rolled_back: true });
+    }
+});
+
+// =============================================================
+// GET /search-bd?q=text&limit=20
+// Cerca lliure sobre bienes per linkar manualment (cas: nom completament
+// diferent però l'usuari sap que existeix). ILIKE + pg_trgm.
+// =============================================================
+router.get('/search-bd', async (req, res) => {
+    const q = (req.query.q || '').toString().trim();
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    if (q.length < 1) return res.json({ results: [] });
+    const asInt = /^\d+$/.test(q) ? parseInt(q, 10) : null;
+    try {
+        const r = await db.query(`
+            SELECT id, denominacion, municipio, provincia, comunidad_autonoma,
+                   latitud, longitud, codigo_fuente, tipo, categoria,
+                   CASE WHEN id = ? THEN 1.0
+                        ELSE similarity(unaccent(denominacion), unaccent(?)) END as score
+              FROM bienes
+             WHERE id = ?
+                OR unaccent(denominacion) ILIKE unaccent(?)
+                OR unaccent(municipio) ILIKE unaccent(?)
+                OR codigo_fuente = ?
+             ORDER BY score DESC NULLS LAST, id ASC
+             LIMIT ?
+        `, [asInt, q, asInt, `%${q}%`, `%${q}%`, q, limit]);
+        res.json({ q, total: r.rows.length, results: r.rows });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// =============================================================
+// GET /column-samples?table=X
+// Per a cada columna de la taula, retorna 3 valors no-null reals
+// d'exemple. Útil per fer tooltips informatius al mapper.
+// =============================================================
+router.get('/column-samples', async (req, res) => {
+    const table = (req.query.table || 'bienes').toString();
+    if (!ALLOWED_TABLES.includes(table)) {
+        return res.status(400).json({ error: 'Taula no permesa' });
+    }
+    try {
+        const colsRes = await db.query(
+            `SELECT column_name, data_type FROM information_schema.columns
+             WHERE table_name = ? ORDER BY ordinal_position`,
+            [table]
+        );
+        const samples = {};
+        for (const c of colsRes.rows) {
+            if (c.column_name === 'id' || c.column_name.endsWith('_at')) continue;
+            try {
+                const r = await db.query(
+                    `SELECT DISTINCT ${c.column_name} as v FROM ${table}
+                     WHERE ${c.column_name} IS NOT NULL
+                       AND ${c.column_name}::text != ''
+                     ORDER BY ${c.column_name}::text
+                     LIMIT 3`,
+                    []
+                );
+                samples[c.column_name] = {
+                    type: c.data_type,
+                    samples: r.rows.map(row => row.v),
+                };
+            } catch (_e) { /* tipus que no es pot text-cast: ignorar */ }
+        }
+        res.json({ table, samples });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// =============================================================
+// SPRINTS — execució de scripts d'enriquiment en background
+// =============================================================
+// Llista whitelisted (no permetem execució arbitrària de qualsevol script).
+// Cada entrada: { id, label, description, file, estimated_min }
+const SPRINTS = [
+    { id: 'qid_tipo', label: '🏛️ QID → tipo_monumento', description: 'P31 → categoria conservadora (esglésies, castells, palaus…)', file: '_sprint_B_qid_tipo.cjs', estimated_min: 5 },
+    { id: 'wikipedia', label: '📖 Wikipedia extracts (descripció)', description: 'Descarrega descripcions Wikipedia per a tots els bienes amb wikipedia_url', file: '_sprint_wikipedia_extracts.cjs', estimated_min: 10 },
+    { id: 'imatges', label: '🖼️ Imatges Wikidata P18', description: 'Imatges principals via Wikidata Property P18', file: '_sprint_imatges_p18.cjs', estimated_min: 8 },
+    { id: 'arquitectos', label: '🧑‍💼 Arquitectos / autores', description: 'Persones associades via Wikidata P84/P170', file: '_sprint_arquitectos_v2.cjs', estimated_min: 6 },
+    { id: 'inception', label: '📅 Inception (any/segle construcció)', description: 'Data P571 inception', file: '_sprint_C_inception.cjs', estimated_min: 4 },
+];
+
+const { spawn } = require('child_process');
+const path2 = require('path');
+
+// In-memory registry. Cap persistència — si el server reinicia, taskes perduts.
+const tasks = new Map(); // taskId → { sprintId, pid, status, startedAt, endedAt, log }
+let _taskCounter = 0;
+
+router.get('/sprints', (_, res) => {
+    res.json({ sprints: SPRINTS });
+});
+
+router.get('/sprint-tasks', (_, res) => {
+    const out = [...tasks.entries()].map(([id, t]) => ({
+        task_id: id, sprint_id: t.sprintId, status: t.status,
+        started_at: t.startedAt, ended_at: t.endedAt,
+        log_lines: t.log.length, log_tail: t.log.slice(-20),
+    })).sort((a, b) => b.started_at - a.started_at).slice(0, 20);
+    res.json({ tasks: out });
+});
+
+router.get('/sprint-tasks/:taskId', (req, res) => {
+    const t = tasks.get(req.params.taskId);
+    if (!t) return res.status(404).json({ error: 'task not found' });
+    res.json({
+        task_id: req.params.taskId,
+        sprint_id: t.sprintId,
+        status: t.status,
+        started_at: t.startedAt,
+        ended_at: t.endedAt,
+        pid: t.pid,
+        log: t.log.slice(-200), // últims 200 lines
+    });
+});
+
+router.post('/run-sprint', express.json({ limit: '1mb' }), (req, res) => {
+    const sprintId = (req.body?.sprint_id || '').toString();
+    const sprint = SPRINTS.find(s => s.id === sprintId);
+    if (!sprint) return res.status(400).json({ error: `sprint_id desconegut. Disponibles: ${SPRINTS.map(s => s.id).join(', ')}` });
+
+    // Evita llançar el mateix sprint si ja n'hi ha un running
+    for (const [, t] of tasks) {
+        if (t.sprintId === sprintId && t.status === 'running') {
+            return res.status(409).json({ error: `Sprint '${sprintId}' ja s'està executant`, task_id: t.taskId });
+        }
+    }
+
+    const taskId = `task_${++_taskCounter}_${Date.now()}`;
+    const scriptPath = path2.join(__dirname, '..', '..', sprint.file);
+
+    const child = spawn(process.execPath, [scriptPath], {
+        cwd: path2.join(__dirname, '..', '..'),
+        env: process.env,
+    });
+
+    const task = {
+        sprintId, taskId, pid: child.pid,
+        status: 'running',
+        startedAt: Date.now(), endedAt: null,
+        log: [`[START] ${new Date().toISOString()} pid=${child.pid} script=${sprint.file}`],
+    };
+    tasks.set(taskId, task);
+
+    const onLine = (prefix) => (chunk) => {
+        const text = chunk.toString();
+        for (const line of text.split(/\r?\n/)) {
+            if (line.trim()) task.log.push(`[${prefix}] ${line}`);
+        }
+        // Limita a 5000 línies per evitar OOM
+        if (task.log.length > 5000) task.log = task.log.slice(-5000);
+    };
+    child.stdout.on('data', onLine('OUT'));
+    child.stderr.on('data', onLine('ERR'));
+    child.on('exit', (code, signal) => {
+        task.status = code === 0 ? 'done' : 'failed';
+        task.endedAt = Date.now();
+        task.log.push(`[EXIT] code=${code} signal=${signal} duration_s=${Math.round((task.endedAt - task.startedAt) / 1000)}`);
+    });
+    child.on('error', (err) => {
+        task.status = 'failed';
+        task.endedAt = Date.now();
+        task.log.push(`[ERROR] ${err.message}`);
+    });
+
+    res.json({ task_id: taskId, sprint_id: sprintId, pid: child.pid, status: 'running' });
+});
+
+// =============================================================
+// POST /wikidata-lookup
+// Cerca candidats a Wikidata per (denominacion + opcionalment coords).
+// Útil per a INSERTs de nous bens: l'usuari pot triar el QID i, post-INSERT,
+// l'enrichment automàtic omplirà descripcion, arquitecto, estilo, imatges.
+//
+// Body: { denominacion, lat?, lng?, radius_km?, languages? = ['es','ca','en'] }
+// =============================================================
+router.post('/wikidata-lookup', express.json({ limit: '1mb' }), async (req, res) => {
+    const { denominacion, lat, lng, radius_km = 5, languages = ['es', 'ca', 'en', 'fr', 'pt'] } = req.body || {};
+    if (!denominacion || String(denominacion).trim().length < 3) {
+        return res.status(400).json({ error: 'denominacion massa curta (mín 3 caràcters)' });
+    }
+    const q = String(denominacion).trim().replace(/"/g, '\\"');
+    const langClause = languages.map(l => `'${l}'`).join(',');
+    const labelLangs = languages.join(',');
+
+    // SPARQL principal: label exacte en qualsevol idioma + opcionalment coords properes
+    const hasCoords = lat != null && lng != null && Number.isFinite(+lat) && Number.isFinite(+lng);
+    let coordsClause = '';
+    if (hasCoords) {
+        // Busca dins d'una bounding box ample (radius_km arrodonit a graus aprox)
+        const dDeg = (radius_km / 111.0);
+        coordsClause = `
+          ?item wdt:P625 ?coord .
+          FILTER(geof:distance(?coord, "Point(${+lng} ${+lat})"^^geo:wktLiteral) < ${radius_km})
+        `;
+    }
+    // SPARQL optimitzat: cerca per label exacte als idiomes principals.
+    // El CONTAINS sobre tots els labels és inacceptable lent a Wikidata.
+    // L'usuari potser cal posar el nom prou específic, sinó pot retornar 0.
+    const sparql = hasCoords ? `
+      # Amb coords: filtra primer per àrea (molt selectiu) i després per label
+      SELECT DISTINCT ?item ?itemLabel ?itemDescription ?coord ?image ?instanceOfLabel WHERE {
+        SERVICE wikibase:around {
+          ?item wdt:P625 ?coord .
+          bd:serviceParam wikibase:center "Point(${+lng} ${+lat})"^^geo:wktLiteral .
+          bd:serviceParam wikibase:radius "${radius_km}" .
+        }
+        ?item rdfs:label ?lbl .
+        FILTER(LANG(?lbl) IN (${langClause}))
+        FILTER(CONTAINS(LCASE(STR(?lbl)), LCASE("${q.substring(0, 60)}")))
+        OPTIONAL { ?item wdt:P18 ?image }
+        OPTIONAL { ?item wdt:P31 ?instanceOf }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "${labelLangs}" }
+      }
+      LIMIT 15
+    ` : `
+      # Sense coords: només label exacte (ràpid via index)
+      SELECT DISTINCT ?item ?itemLabel ?itemDescription ?coord ?image ?instanceOfLabel WHERE {
+        { ?item rdfs:label "${q}"@es } UNION
+        { ?item rdfs:label "${q}"@ca } UNION
+        { ?item rdfs:label "${q}"@en }
+        OPTIONAL { ?item wdt:P625 ?coord }
+        OPTIONAL { ?item wdt:P18 ?image }
+        OPTIONAL { ?item wdt:P31 ?instanceOf }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "${labelLangs}" }
+      }
+      LIMIT 15
+    `;
+    const url = 'https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(sparql);
+    try {
+        const r = await fetch(url, {
+            headers: {
+                'User-Agent': 'PatrimonioEuropeo-Integraciones/1.0 (webdepatrimonio@gmail.com)',
+                'Accept': 'application/sparql-results+json',
+            },
+            // SPARQL Wikidata pot tardar. Límit 20s.
+            signal: AbortSignal.timeout(20000),
+        });
+        if (!r.ok) {
+            const txt = await r.text();
+            return res.status(502).json({ error: `Wikidata SPARQL ${r.status}: ${txt.substring(0, 200)}` });
+        }
+        const data = await r.json();
+        const candidates = (data.results?.bindings || []).map(b => {
+            const itemUri = b.item?.value || '';
+            const qid = itemUri.split('/').pop();
+            return {
+                qid,
+                label: b.itemLabel?.value || null,
+                description: b.itemDescription?.value || null,
+                coord: b.coord?.value || null,
+                image: b.image?.value || null,
+                instance_of: b.instanceOfLabel?.value || null,
+                wikipedia: `https://es.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(b.itemLabel?.value || qid)}`,
+            };
+        }).filter(c => c.qid && c.qid.startsWith('Q'));
+
+        // Dedup per qid (la query UNION pot retornar duplicats)
+        const seen = new Set();
+        const unique = candidates.filter(c => seen.has(c.qid) ? false : seen.add(c.qid));
+
+        res.json({ query: denominacion, has_coords: hasCoords, total: unique.length, candidates: unique.slice(0, 10) });
+    } catch (e) {
+        if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+            return res.status(504).json({ error: 'Wikidata SPARQL timeout (>20s). Prova amb un nom més específic.' });
+        }
+        res.status(502).json({ error: e.message });
     }
 });
 
