@@ -2613,6 +2613,19 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.sin_imagen === 'true') {
             where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
+        // Llistes Hispania Nostra: nou param hn_listas (CSV: "roja,verde,negra") + backward-compat solo_hispania_nostra=true
+        {
+            const hnListas = req.query.hn_listas
+                ? String(req.query.hn_listas).split(',').map(s => s.trim()).filter(s => ['roja','verde','negra'].includes(s))
+                : (req.query.solo_hispania_nostra === 'true' ? ['roja','verde','negra'] : []);
+            if (hnListas.length > 0) {
+                const conds = [];
+                if (hnListas.includes('roja')) conds.push(`(w.heritage_label ILIKE '%lista roja%' OR b.tipo ILIKE '%lista roja%' OR b.categoria ILIKE '%lista roja%')`);
+                if (hnListas.includes('verde')) conds.push(`(w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%' OR b.tipo ILIKE '%lista verde%' OR b.categoria ILIKE '%lista verde%')`);
+                if (hnListas.includes('negra')) conds.push(`(w.heritage_label ILIKE '%lista negra%' OR b.tipo ILIKE '%lista negra%' OR b.categoria ILIKE '%lista negra%')`);
+                where.push('(' + conds.join(' OR ') + ')');
+            }
+        }
         // Oleada B — propiedades Wikidata estructuradas (ILIKE %value% para match en valores concatenados con " | ")
         if (req.query.propietario) {
             where.push(`w.propietario ILIKE $${pi++}`);
@@ -3013,6 +3026,19 @@ app.get('/api/geojson', async (req, res) => {
         if (req.query.sin_imagen === 'true') {
             where.push('(w.imagen_url IS NULL AND NOT EXISTS (SELECT 1 FROM imagenes WHERE bien_id = b.id))');
         }
+        // Llistes Hispania Nostra: nou param hn_listas (CSV) + backward-compat solo_hispania_nostra=true
+        {
+            const hnListas = req.query.hn_listas
+                ? String(req.query.hn_listas).split(',').map(s => s.trim()).filter(s => ['roja','verde','negra'].includes(s))
+                : (req.query.solo_hispania_nostra === 'true' ? ['roja','verde','negra'] : []);
+            if (hnListas.length > 0) {
+                const conds = [];
+                if (hnListas.includes('roja')) conds.push(`(w.heritage_label ILIKE '%lista roja%' OR b.tipo ILIKE '%lista roja%' OR b.categoria ILIKE '%lista roja%')`);
+                if (hnListas.includes('verde')) conds.push(`(w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%' OR b.tipo ILIKE '%lista verde%' OR b.categoria ILIKE '%lista verde%')`);
+                if (hnListas.includes('negra')) conds.push(`(w.heritage_label ILIKE '%lista negra%' OR b.tipo ILIKE '%lista negra%' OR b.categoria ILIKE '%lista negra%')`);
+                where.push('(' + conds.join(' OR ') + ')');
+            }
+        }
         // Oleada B — propiedades Wikidata estructuradas
         if (req.query.propietario) {
             where.push(`w.propietario ILIKE $${pi++}`);
@@ -3064,7 +3090,13 @@ app.get('/api/geojson', async (req, res) => {
                 b.municipio, b.provincia, b.comunidad_autonoma, b.pais,
                 b.latitud, b.longitud, b.coords_precision,
                 b.tipo_monumento, b.periodo, b.heritage_world,
-                w.qid, w.imagen_url, w.estilo
+                w.qid, w.imagen_url, w.estilo, w.heritage_label,
+                CASE
+                    WHEN w.heritage_label ILIKE '%lista roja%' OR b.tipo ILIKE '%lista roja%' OR b.categoria ILIKE '%lista roja%' THEN 'roja'
+                    WHEN w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%' OR b.tipo ILIKE '%lista verde%' OR b.categoria ILIKE '%lista verde%' THEN 'verde'
+                    WHEN w.heritage_label ILIKE '%lista negra%' OR b.tipo ILIKE '%lista negra%' OR b.categoria ILIKE '%lista negra%' THEN 'negra'
+                    ELSE NULL
+                END AS hn_lista
             FROM bienes b
             LEFT JOIN wikidata w ON b.id = w.bien_id
             WHERE ${where.join(' AND ')}
@@ -3098,6 +3130,8 @@ app.get('/api/geojson', async (req, res) => {
                     periodo: item.periodo,
                     coords_precision: item.coords_precision,
                     heritage_world: item.heritage_world,
+                    heritage_label: item.heritage_label,
+                    hn_lista: item.hn_lista,
                 },
             })),
         };
@@ -3505,6 +3539,22 @@ app.get('/api/ccaa-resumen', async (req, res) => {
         }
         if (req.query.solo_imagen === 'true') {
             where.push('EXISTS (SELECT 1 FROM imagenes i WHERE i.bien_id = b.id)');
+        }
+        // Llistes Hispania Nostra: nou param hn_listas (CSV) + backward-compat solo_hispania_nostra=true
+        {
+            const hnListas = req.query.hn_listas
+                ? String(req.query.hn_listas).split(',').map(s => s.trim()).filter(s => ['roja','verde','negra'].includes(s))
+                : (req.query.solo_hispania_nostra === 'true' ? ['roja','verde','negra'] : []);
+            if (hnListas.length > 0) {
+                const buildCond = (lista) => {
+                    let wikidataPart;
+                    if (lista === 'roja') wikidataPart = `w.heritage_label ILIKE '%lista roja%'`;
+                    else if (lista === 'verde') wikidataPart = `(w.heritage_label ILIKE '%lista verde%' OR w.heritage_label ILIKE '%lista verda%')`;
+                    else wikidataPart = `w.heritage_label ILIKE '%lista negra%'`;
+                    return `(EXISTS (SELECT 1 FROM wikidata w WHERE w.bien_id = b.id AND ${wikidataPart}) OR b.tipo ILIKE '%lista ${lista}%' OR b.categoria ILIKE '%lista ${lista}%')`;
+                };
+                where.push('(' + hnListas.map(buildCond).join(' OR ') + ')');
+            }
         }
 
         const resumenR = await db.query(`
