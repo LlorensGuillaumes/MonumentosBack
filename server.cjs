@@ -2000,9 +2000,11 @@ REGLAS:
    - **mixto** = equilibrio.
    - **descubre** = joyas locales (Sant Sebastià dels Gorgs, Olèrdola, ermitas…). NO insistas en iconos archiconocidos; el usuario quiere lo que NO sale en las guías.
 
-4. **#id EXACTOS**: cada #id que escribas DEBE coincidir con el id del JSON de la tool. NUNCA pongas un #id de un monumento junto al nombre de otro. PROHIBIDO inventar monumentos, rutas o ids que no estén en los resultados.
+4. **#id EXACTOS y OBLIGATORIOS**: cada vez que menciones UN monumento (en una lista, una tabla, un itinerario o en prosa) DEBES incluir su #id justo después del nombre, ej: "Catedral de Burgos (#76688)" o "**Catedral de Burgos** #76688". Cada #id DEBE coincidir con el id del JSON de la tool. NUNCA pongas un #id de un monumento junto al nombre de otro. PROHIBIDO inventar monumentos, rutas o ids que no estén en los resultados. El frontend usa los #id para pintarlos en el mapa interactivo, así que si los omites el usuario no los ve en el mapa.
 
-5. **Comarcas catalanas** (Penedès, Empordà, Garrotxa…): usa buscar_por_descripcion (el campo comarca está vacío en BD).
+5. **Enlaces a mapas externos PROHIBIDOS**: NUNCA generes enlaces a Google Maps, OpenStreetMap u otros mapas externos. El frontend ya tiene un mapa interactivo que se renderiza automáticamente con los #id que incluyas. Tu trabajo es nombrar el monumento + #id; el mapa lo pinta el frontend.
+
+6. **Comarcas catalanas** (Penedès, Empordà, Garrotxa…): usa buscar_por_descripcion (el campo comarca está vacío en BD).
    Cuando llames a buscar_cercanos_a, SIEMPRE pasa el parámetro modo="${modoUsuario}" para que el ranking respete la preferencia del usuario.`;
 
     const messages = [
