@@ -177,9 +177,13 @@ function recordViolation(ip, endpoint) {
     }
 }
 
+// Localhost SEMPRE permès — desenvolupament + demos no es poden bloquejar
+const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
+
 // Middleware GLOBAL que comprueba bloqueo antes de cualquier route
 app.use((req, res, next) => {
     const ip = getClientIp(req);
+    if (LOCALHOST_IPS.has(ip)) return next(); // mai bloquejar localhost
     const v = ipViolations.get(ip);
     if (v && v.blockedUntil && Date.now() < v.blockedUntil) {
         return res.status(429).json({
@@ -198,10 +202,14 @@ function makeRateLimitHandler(endpointLabel) {
     };
 }
 
+// Localhost skip helper: limiters NO compten requests originades a localhost
+const skipLocalhost = (req) => LOCALHOST_IPS.has(getClientIp(req));
+
 // Rate limiting — general: 150 req/min per IP (frontend SPA hace muchos requests por navegación)
 const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 150,
+    skip: skipLocalhost,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('general'),
@@ -213,6 +221,7 @@ app.use('/api', generalLimiter);
 const dataLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 150,
+    skip: skipLocalhost,
     standardHeaders: true,
     legacyHeaders: false,
     handler: makeRateLimitHandler('data'),
@@ -1271,6 +1280,35 @@ const CHAT_TOOLS = [
 ];
 
 // Ejecutores de tools
+// Normalitza CCAA: el LLM tradueix entre català/castellà però la BD només té
+// un dels noms. Fer LIKE permissiu i mappar variants conegudes.
+const CCAA_ALIASES = {
+    'cataluña': 'Catalunya', 'catalonia': 'Catalunya', 'catalunya': 'Catalunya',
+    'país valenciano': 'Comunidad Valenciana', 'comunitat valenciana': 'Comunidad Valenciana',
+    'país valencià': 'Comunidad Valenciana', 'valencia': 'Comunidad Valenciana',
+    'euskadi': 'País Vasco', 'pais vasco': 'País Vasco', 'pais vasc': 'País Vasco', 'euskal herria': 'País Vasco',
+    'galiza': 'Galicia', 'galícia': 'Galicia',
+    'illes balears': 'Islas Baleares', 'iles balears': 'Islas Baleares', 'balears': 'Islas Baleares',
+    'castela e leon': 'Castilla y León', 'castela y leon': 'Castilla y León',
+    'castella i lleó': 'Castilla y León',
+    'castilla-la mancha': 'Castilla-La Mancha', 'castella la manxa': 'Castilla-La Mancha',
+    'aragón': 'Aragón', 'aragó': 'Aragón',
+    'andalucia': 'Andalucía', 'andalusia': 'Andalucía',
+    'asturies': 'Asturias', 'asturias': 'Asturias',
+    'navarra': 'Navarra', 'nafarroa': 'Navarra',
+    'la rioja': 'La Rioja',
+    'cantabria': 'Cantabria',
+    'extremadura': 'Extremadura',
+    'murcia': 'Región de Murcia', 'región de murcia': 'Región de Murcia',
+    'canarias': 'Canarias', 'illes canàries': 'Canarias',
+    'madrid': 'Comunidad de Madrid', 'comunidad de madrid': 'Comunidad de Madrid',
+};
+function normalizeRegion(name) {
+    if (!name) return name;
+    const k = name.toLowerCase().trim();
+    return CCAA_ALIASES[k] || name;
+}
+
 async function toolBuscarPorFiltros(args) {
     const filtros = [];
     const params = [];
@@ -1281,7 +1319,7 @@ async function toolBuscarPorFiltros(args) {
         else { filtros.push(`${col} = $${p++}`); params.push(val); }
     };
     add('b.pais', args.pais);
-    add('b.comunidad_autonoma', args.region, 'LIKE');
+    add('b.comunidad_autonoma', normalizeRegion(args.region), 'LIKE');
     add('b.provincia', args.provincia, 'LIKE');
     add('b.comarca', args.comarca, 'LIKE');
     add('b.municipio', args.municipio, 'LIKE');
@@ -2642,18 +2680,23 @@ app.get('/api/monumentos', async (req, res) => {
         if (req.query.q) {
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                // 1) bien_aliases (BD search externa, si està configurada)
+                // 1) bien_aliases (BD search externa Neon) — amb timeout 3s
+                //    Si la BD externa està lenta, no bloquegem el endpoint principal
                 let aliasBienIds = [];
                 const searchPool = db.getSearchPool && db.getSearchPool();
                 if (searchPool) {
                     try {
-                        const r = await searchPool.query(
+                        const aliasPromise = searchPool.query(
                             `SELECT DISTINCT bien_id FROM bien_aliases
                              WHERE unaccent(LOWER(alias)) ILIKE unaccent(LOWER($1)) LIMIT 200`,
                             [`%${qTokenized}%`]
                         );
+                        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('alias search timeout 3s')), 3000));
+                        const r = await Promise.race([aliasPromise, timeoutPromise]);
                         aliasBienIds = r.rows.map(x => x.bien_id);
-                    } catch (e) { console.error('alias search:', e.message); }
+                    } catch (e) {
+                        if (!e.message.includes('timeout')) console.error('alias search:', e.message);
+                    }
                 }
                 // 2) denominaciones_alternativas (Comparator/Integraciones)
                 let altBienIds = [];
@@ -2961,7 +3004,7 @@ app.get('/api/monumentos/:id', async (req, res) => {
             return res.status(404).json({ error: 'Monumento no encontrado' });
         }
 
-        const [imagenesResult, eventos] = await Promise.all([
+        const [imagenesResult, eventos, alternativasResult] = await Promise.all([
             db.query(
                 `SELECT url, titulo, autor, fuente, metadata
                  FROM (
@@ -2986,12 +3029,20 @@ app.get('/api/monumentos/:id', async (req, res) => {
                 [id, bien.imagen_url || null]
             ),
             db.obtenerEventosMonumento(id),
+            db.query(
+                `SELECT denominacion, idioma, fuente, es_principal
+                 FROM denominaciones_alternativas
+                 WHERE bien_id = ?
+                 ORDER BY es_principal DESC, idioma NULLS LAST, denominacion`,
+                [id]
+            ).catch(() => ({ rows: [] })),
         ]);
 
         res.json({
             ...bien,
             imagenes: imagenesResult.rows,
             eventos,
+            denominaciones_alternativas: alternativasResult.rows,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -3067,18 +3118,23 @@ app.get('/api/geojson', async (req, res) => {
         if (req.query.q) {
             const qTokenized = String(req.query.q).trim().split(/\s+/).filter(Boolean).join('%');
             if (qTokenized) {
-                // 1) bien_aliases (BD search externa, si està configurada)
+                // 1) bien_aliases (BD search externa Neon) — amb timeout 3s
+                //    Si la BD externa està lenta, no bloquegem el endpoint principal
                 let aliasBienIds = [];
                 const searchPool = db.getSearchPool && db.getSearchPool();
                 if (searchPool) {
                     try {
-                        const r = await searchPool.query(
+                        const aliasPromise = searchPool.query(
                             `SELECT DISTINCT bien_id FROM bien_aliases
                              WHERE unaccent(LOWER(alias)) ILIKE unaccent(LOWER($1)) LIMIT 200`,
                             [`%${qTokenized}%`]
                         );
+                        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('alias search timeout 3s')), 3000));
+                        const r = await Promise.race([aliasPromise, timeoutPromise]);
                         aliasBienIds = r.rows.map(x => x.bien_id);
-                    } catch (e) { console.error('alias search:', e.message); }
+                    } catch (e) {
+                        if (!e.message.includes('timeout')) console.error('alias search:', e.message);
+                    }
                 }
                 // 2) denominaciones_alternativas (Comparator/Integraciones)
                 let altBienIds = [];
@@ -4796,41 +4852,45 @@ app.get('/api/monumentos/:id/eventos', async (req, res) => {
  * Devuelve personas (arquitectos, creadores, autores) con número de bienes asociados.
  * Soporta búsqueda fuzzy (trigram + unaccent) sobre el nombre.
  */
+// Filtre conceptual: distingim autors reals (arquitecto/escultor/etc) de
+// dedicatòries (advocacion = a qui està dedicada l'església — Virgen María,
+// San Pedro). Wikidata mete tots dos a P170/P84/P825 amb rols diferents.
+const ROLES_AUTOR = ['arquitecto', 'escultor', 'obra_conservada', 'personaje_historico'];
+const ROLES_DEDICADO = ['advocacion', 'lleva_nombre_de', 'sepulcre_de'];
+
 app.get('/api/personas', async (req, res) => {
     try {
         const q = String(req.query.q || '').trim();
-        const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+        // Límit ampli (500): cobreix dels casos rellevants sense que la query
+        // GROUP BY trigui massa. Si volem ordenar/paginar, després afegirem
+        // ordering i scroll virtual al frontend.
+        const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
+        const modo = req.query.modo === 'dedicados' ? 'dedicados' : 'autores';
+        const rolesFilter = modo === 'dedicados' ? ROLES_DEDICADO : ROLES_AUTOR;
 
-        let sql, params;
+        let where = `rol = ANY($1)`;
+        let params = [rolesFilter];
+        let pi = 2;
         if (q.length >= 2) {
-            sql = `
-                SELECT nombre,
-                       STRING_AGG(DISTINCT rol, ',' ORDER BY rol) AS roles,
-                       COUNT(DISTINCT bien_id) AS n_bienes,
-                       MAX(qid_persona) AS qid
-                FROM bien_personas
-                WHERE unaccent(LOWER(nombre)) ILIKE unaccent(LOWER($1))
-                GROUP BY nombre
-                ORDER BY n_bienes DESC, nombre
-                LIMIT ${limit}
-            `;
-            params = [`%${q}%`];
-        } else {
-            // Sin q → top personas con más bienes
-            sql = `
-                SELECT nombre,
-                       STRING_AGG(DISTINCT rol, ',' ORDER BY rol) AS roles,
-                       COUNT(DISTINCT bien_id) AS n_bienes,
-                       MAX(qid_persona) AS qid
-                FROM bien_personas
-                GROUP BY nombre
-                ORDER BY n_bienes DESC
-                LIMIT ${limit}
-            `;
-            params = [];
+            // Tokenize amb '%' entre paraules: "Juan Bautista" → matchea "Juan el Bautista"
+            const qTokenized = q.trim().split(/\s+/).filter(Boolean).join('%');
+            where += ` AND unaccent(LOWER(nombre)) ILIKE unaccent(LOWER($${pi++}))`;
+            params.push(`%${qTokenized}%`);
         }
+
+        const sql = `
+            SELECT nombre,
+                   STRING_AGG(DISTINCT rol, ',' ORDER BY rol) AS roles,
+                   COUNT(DISTINCT bien_id) AS n_bienes,
+                   MAX(qid_persona) AS qid
+            FROM bien_personas
+            WHERE ${where}
+            GROUP BY nombre
+            ORDER BY n_bienes DESC${q.length >= 2 ? ', nombre' : ''}
+            LIMIT ${limit}
+        `;
         const r = await db.query(sql, params);
-        res.json({ count: r.rows.length, personas: r.rows });
+        res.json({ count: r.rows.length, modo, personas: r.rows });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -4843,7 +4903,10 @@ app.get('/api/personas', async (req, res) => {
 app.get('/api/personas/:qid/bienes', async (req, res) => {
     try {
         const qid = String(req.params.qid);
-        const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+        // Sense límit dur: el frontend pagina visualment 50/cop. Algun cas
+        // extrem (Virgen María ~2000) pot retornar molts records — el client
+        // pot manejar-ho i el mapa Leaflet també.
+        const limit = Math.min(parseInt(req.query.limit, 10) || 10000, 10000);
         const r = await db.query(`
             SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comarca, b.pais,
                    b.tipo_monumento, b.periodo, b.latitud, b.longitud,

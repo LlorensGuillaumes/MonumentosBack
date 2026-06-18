@@ -45,9 +45,12 @@ function getEnrichmentPool(lang) {
         _enrichmentPools[key] = false;
         return null;
     }
+    // IMPORTANT: forçar port 5432. Sense això, pg agafa process.env.PGPORT
+    // (5433 = Docker local) com a fallback i intenta connectar a 5433 a Neon.
     _enrichmentPools[key] = new Pool({
         connectionString: url.replace(/^'|'$/g, '').replace(/\s+/g, ''),
         ssl: { rejectUnauthorized: false },
+        port: 5432,
     });
     return _enrichmentPools[key];
 }
@@ -69,13 +72,21 @@ function getSearchPool() {
     return _searchPool || null;
 }
 
+// Timeout dur 1.5s — Neon free-tier pot hibernar i bloquejar el endpoint
+// principal. Millor descripció buida que fitxa lenta. Si Neon està despert
+// les queries triguen ~100ms, així que cap problema en condicions normals.
 async function queryEnrichment(lang, sql, params) {
     const pool = getEnrichmentPool(lang);
     if (!pool) return null;
     try {
-        return await pool.query(pgParams(sql), params);
+        return await Promise.race([
+            pool.query(pgParams(sql), params),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('enrichment timeout 1.5s')), 1500)),
+        ]);
     } catch (e) {
-        console.error(`[Enrichment DB ${lang}] query error:`, e.message);
+        if (!e.message.includes('timeout')) {
+            console.error(`[Enrichment DB ${lang}] query error:`, e.message);
+        }
         return null;
     }
 }
