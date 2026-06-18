@@ -15,10 +15,18 @@
 const express = require('express');
 const multer = require('multer');
 const { parse: csvParse } = require('csv-parse/sync');
-const XLSX = require('xlsx');
 const { XMLParser } = require('fast-xml-parser');
 const path = require('path');
 const db = require('../../db.cjs');
+
+// xlsx (SheetJS) — opcional. La v0.18.5 va ser deprecada del NPM registry
+// el 2023; SheetJS distribueix via CDN propi (cdn.sheetjs.com). Si npm ci a
+// Render falla per la versió, el router segueix arrencant; només els uploads
+// .xlsx queden deshabilitats.
+let XLSX = null;
+try { XLSX = require('xlsx'); } catch (e) {
+    console.warn('[Integraciones] xlsx no disponible — uploads .xlsx deshabilitats. Resta funciona.');
+}
 
 const router = express.Router();
 
@@ -123,6 +131,7 @@ function parseFile(buffer, originalName) {
         });
     }
     if (ext === '.xlsx' || ext === '.xls') {
+        if (!XLSX) throw new Error('xlsx dep no disponible en aquest entorn (instal·la SheetJS des de cdn.sheetjs.com)');
         const wb = XLSX.read(buffer, { type: 'buffer' });
         const sheetName = wb.SheetNames[0];
         const sheet = wb.Sheets[sheetName];
