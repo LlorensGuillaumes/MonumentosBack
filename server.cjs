@@ -2496,53 +2496,10 @@ app.delete('/api/favoritos/:bienId', authMiddleware, async (req, res) => {
 });
 
 // Opciones de ordenación (whitelist para evitar SQL injection)
-const RELEVANCE_SCORE = `(
-    CASE
-        WHEN w.heritage_label ILIKE '%patrimonio de la humanidad%'
-          OR w.heritage_label ILIKE '%world heritage%'
-          OR w.heritage_label ILIKE '%parte de un sitio Patrimonio%'
-          OR w.heritage_label ILIKE '%patrimoine mondial%'
-          OR w.heritage_label ILIKE '%patrimonio dell''umanità%'
-          OR w.heritage_label ILIKE '%Património Mundial%' THEN 20
-        WHEN w.heritage_label ILIKE '%classé%'
-          OR w.heritage_label = 'bien de interés cultural'
-          OR w.heritage_label = 'BIC'
-          OR w.heritage_label ILIKE '%Monumento Nacional%'
-          OR w.heritage_label ILIKE '%Monumento de Interesse Público%' THEN 15
-        WHEN w.heritage_label ILIKE '%inscrit%'
-          OR w.heritage_label ILIKE '%Interesse Público%'
-          OR w.heritage_label ILIKE '%bene culturale%'
-          OR w.heritage_label ILIKE '%Bien cultural%'
-          OR w.heritage_label ILIKE '%notevole interesse%' THEN 12
-        WHEN w.heritage_label IS NOT NULL THEN 8
-        ELSE 0
-    END
-    + CASE WHEN w.wikipedia_url IS NOT NULL THEN 10 ELSE 0 END
-    + CASE
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 500 THEN 5
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 100 THEN 3
-        WHEN LENGTH(COALESCE(w.descripcion,'')) > 0 THEN 1
-        ELSE 0
-    END
-    + CASE WHEN w.imagen_url IS NOT NULL THEN 10 ELSE 0 END
-    + CASE WHEN b.latitud IS NOT NULL THEN 5 ELSE 0 END
-    + CASE WHEN w.estilo IS NOT NULL THEN 3 ELSE 0 END
-    + CASE WHEN w.arquitecto IS NOT NULL THEN 1 ELSE 0 END
-    + CASE WHEN w.inception IS NOT NULL THEN 3 ELSE 0 END
-    + CASE WHEN w.commons_category IS NOT NULL THEN 3 ELSE 0 END
-    + CASE
-        WHEN b.heritage_world = 'both'    THEN 50
-        WHEN b.heritage_world = 'unesco'  THEN 40
-        WHEN b.heritage_world = 'european' THEN 25
-        ELSE 0
-    END
-    + CASE
-        WHEN LENGTH(b.denominacion) <= 25 THEN 8
-        WHEN LENGTH(b.denominacion) <= 40 THEN 4
-        WHEN LENGTH(b.denominacion) >= 60 THEN -3
-        ELSE 0
-    END
-)`;
+// Relevancia MATERIALIZADA en columna indexada (bienes.relevance_score, ver _relevance_materialize.sql
+// y _recalcular_relevance.cjs). Antes era un CASE inline sobre b+w que en la carga sin filtros
+// recorría los 308k (~5,6s); ahora es un lookup de columna indexada → ORDER BY relevancia instantáneo.
+const RELEVANCE_SCORE = `COALESCE(b.relevance_score, 0)`;
 
 // Quita caracteres iniciales no alfabéticos (comillas, paréntesis, etc.)
 // para que el ordenamiento alfabético funcione correctamente
@@ -2550,7 +2507,7 @@ const NORM_NAME = `LOWER(regexp_replace(b.denominacion, '^[^a-zA-Z0-9áéíóú�
 const NORM_MUN = `LOWER(regexp_replace(b.municipio, '^[^a-zA-Z0-9áéíóúñçàèìòùäëïöüÁÉÍÓÚÑÇÀÈÌÒÙÄËÏÖÜ]+', '', 'g'))`;
 
 const SORT_OPTIONS = {
-    'relevancia':     `${RELEVANCE_SCORE} DESC, ${NORM_NAME} ASC`,
+    'relevancia':     `${RELEVANCE_SCORE} DESC, b.id`,
     'nombre_asc':     `${NORM_NAME} ASC`,
     'nombre_desc':    `${NORM_NAME} DESC`,
     'municipio_asc':  `${NORM_MUN} ASC, ${NORM_NAME} ASC`,
@@ -2818,7 +2775,10 @@ app.get('/api/monumentos', async (req, res) => {
         }
 
         const allParams = [...params, ...tierParams, limit, offset];
-        const useInterleave = sortKey === 'relevancia' && !req.query.pais && !matchTier;
+        // Interleave por país DESACTIVADO: ordenar directo por relevance_score (columna indexada)
+        // es ~20x más rápido (carga sin filtros pasó de ~3,6s a ~0,18s) y mantiene suficiente
+        // diversidad geográfica. El else-path lo maneja con SORT_OPTIONS['relevancia'].
+        const useInterleave = false;
 
         let query;
         if (useInterleave) {
