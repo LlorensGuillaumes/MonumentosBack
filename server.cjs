@@ -4884,6 +4884,76 @@ app.get('/api/personas', async (req, res) => {
 });
 
 /**
+ * GET /api/personas/:qid/info?lang=es
+ * Datos biográficos del autor desde Wikidata + extracto de Wikipedia (on-demand, con caché 7d).
+ */
+const _personaInfoCache = new Map(); // `${qid}_${lang}` → { data, ts }
+const PERSONA_INFO_TTL = 1000 * 60 * 60 * 24 * 7;
+
+app.get('/api/personas/:qid/info', async (req, res) => {
+    try {
+        const qid = String(req.params.qid || '').trim();
+        if (!/^Q\d+$/.test(qid)) return res.status(400).json({ error: 'QID inválido' });
+        const LANGS = ['es', 'ca', 'en', 'fr', 'it', 'pt', 'gl', 'eu'];
+        const lang = LANGS.includes(req.query.lang) ? req.query.lang : 'es';
+        const cacheKey = `${qid}_${lang}`;
+        const cached = _personaInfoCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts) < PERSONA_INFO_TTL) return res.json(cached.data);
+
+        const info = {
+            qid, nombre: null, descripcion: null, nacimiento: null, defuncion: null,
+            imagen: null, wikipedia_url: null, lugar_nacimiento: null, pais: null, biografia: null,
+        };
+
+        const sparql = `
+            SELECT ?personLabel ?personDescription ?birth ?death ?image ?article ?birthPlaceLabel ?countryLabel WHERE {
+                VALUES ?person { wd:${qid} }
+                OPTIONAL { ?person wdt:P569 ?birth. }
+                OPTIONAL { ?person wdt:P570 ?death. }
+                OPTIONAL { ?person wdt:P18 ?image. }
+                OPTIONAL { ?person wdt:P19 ?birthPlace. }
+                OPTIONAL { ?person wdt:P27 ?country. }
+                OPTIONAL { ?article schema:about ?person ; schema:isPartOf <https://${lang}.wikipedia.org/> }
+                SERVICE wikibase:label { bd:serviceParam wikibase:language "${lang},es,en,ca,fr,it,pt" }
+            } LIMIT 1`;
+        try {
+            const wd = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}`,
+                { headers: { 'Accept': 'application/sparql-results+json', 'User-Agent': 'PatrimonioEuropeo/1.0' } });
+            if (wd.ok) {
+                const b = (await wd.json()).results?.bindings?.[0];
+                if (b) {
+                    info.nombre = b.personLabel?.value || null;
+                    info.descripcion = b.personDescription?.value || null;
+                    info.nacimiento = b.birth?.value || null;
+                    info.defuncion = b.death?.value || null;
+                    info.imagen = b.image?.value || null;
+                    info.wikipedia_url = b.article?.value || null;
+                    info.lugar_nacimiento = b.birthPlaceLabel?.value || null;
+                    info.pais = b.countryLabel?.value || null;
+                }
+            }
+        } catch (e) { console.error('persona info SPARQL:', e.message); }
+
+        if (info.wikipedia_url) {
+            try {
+                const title = decodeURIComponent(info.wikipedia_url.split('/wiki/').pop());
+                const wpUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=1&explaintext=1&redirects=1&titles=${encodeURIComponent(title)}`;
+                const wp = await fetch(wpUrl, { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } });
+                if (wp.ok) {
+                    const page = Object.values((await wp.json()).query?.pages || {})[0];
+                    if (page?.extract) info.biografia = page.extract;
+                }
+            } catch (e) { console.error('persona info wiki:', e.message); }
+        }
+
+        _personaInfoCache.set(cacheKey, { data: info, ts: Date.now() });
+        res.json(info);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
  * GET /api/personas/:qid/bienes
  * Devuelve los bienes asociados a una persona (por QID Wikidata).
  */
