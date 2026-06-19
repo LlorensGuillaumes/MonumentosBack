@@ -4902,18 +4902,17 @@ app.get('/api/personas/:qid/info', async (req, res) => {
 
         const info = {
             qid, nombre: null, descripcion: null, nacimiento: null, defuncion: null,
-            imagen: null, wikipedia_url: null, lugar_nacimiento: null, pais: null, biografia: null,
+            imagen: null, wikipedia_url: null, lugar_nacimiento: null, pais: null, biografia: null, biografia_lang: null,
         };
 
         const sparql = `
-            SELECT ?personLabel ?personDescription ?birth ?death ?image ?article ?birthPlaceLabel ?countryLabel WHERE {
+            SELECT ?personLabel ?personDescription ?birth ?death ?image ?birthPlaceLabel ?countryLabel WHERE {
                 VALUES ?person { wd:${qid} }
                 OPTIONAL { ?person wdt:P569 ?birth. }
                 OPTIONAL { ?person wdt:P570 ?death. }
                 OPTIONAL { ?person wdt:P18 ?image. }
                 OPTIONAL { ?person wdt:P19 ?birthPlace. }
                 OPTIONAL { ?person wdt:P27 ?country. }
-                OPTIONAL { ?article schema:about ?person ; schema:isPartOf <https://${lang}.wikipedia.org/> }
                 SERVICE wikibase:label { bd:serviceParam wikibase:language "${lang},es,en,ca,fr,it,pt" }
             } LIMIT 1`;
         try {
@@ -4927,24 +4926,35 @@ app.get('/api/personas/:qid/info', async (req, res) => {
                     info.nacimiento = b.birth?.value || null;
                     info.defuncion = b.death?.value || null;
                     info.imagen = b.image?.value || null;
-                    info.wikipedia_url = b.article?.value || null;
                     info.lugar_nacimiento = b.birthPlaceLabel?.value || null;
                     info.pais = b.countryLabel?.value || null;
                 }
             }
         } catch (e) { console.error('persona info SPARQL:', e.message); }
 
-        if (info.wikipedia_url) {
-            try {
-                const title = decodeURIComponent(info.wikipedia_url.split('/wiki/').pop());
-                const wpUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=1&explaintext=1&redirects=1&titles=${encodeURIComponent(title)}`;
-                const wp = await fetch(wpUrl, { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } });
-                if (wp.ok) {
-                    const page = Object.values((await wp.json()).query?.pages || {})[0];
-                    if (page?.extract) info.biografia = page.extract;
+        // Wikipedia: elegir artículo por preferencia de idioma (fallback si no existe en 'lang')
+        try {
+            const ent = await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=sitelinks&format=json&origin=*`,
+                { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } });
+            if (ent.ok) {
+                const sitelinks = (await ent.json()).entities?.[qid]?.sitelinks || {};
+                const pref = [lang, 'ca', 'es', 'en', 'fr', 'it', 'pt', 'gl', 'eu'];
+                let chosen = null;
+                for (const lg of pref) {
+                    if (sitelinks[`${lg}wiki`]) { chosen = { lg, title: sitelinks[`${lg}wiki`].title }; break; }
                 }
-            } catch (e) { console.error('persona info wiki:', e.message); }
-        }
+                if (chosen) {
+                    info.wikipedia_url = `https://${chosen.lg}.wikipedia.org/wiki/${encodeURIComponent(chosen.title.replace(/ /g, '_'))}`;
+                    info.biografia_lang = chosen.lg;
+                    const wpUrl = `https://${chosen.lg}.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=1&explaintext=1&redirects=1&titles=${encodeURIComponent(chosen.title)}`;
+                    const wp = await fetch(wpUrl, { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' } });
+                    if (wp.ok) {
+                        const page = Object.values((await wp.json()).query?.pages || {})[0];
+                        if (page?.extract) info.biografia = page.extract;
+                    }
+                }
+            }
+        } catch (e) { console.error('persona info wiki:', e.message); }
 
         _personaInfoCache.set(cacheKey, { data: info, ts: Date.now() });
         res.json(info);
