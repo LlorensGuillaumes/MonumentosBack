@@ -2620,6 +2620,8 @@ app.get('/api/monumentos', async (req, res) => {
         let where = [];
         let params = [];
         let pi = 1;
+        // Ranking por tier de coincidencia textual (solo búsqueda q): nombre > alias > denom. alternativa
+        let qNameIdx = null, qAliasIds = [], qAltIds = [];
 
         if (req.query.pais) {
             where.push(`b.pais = $${pi++}`);
@@ -2712,12 +2714,18 @@ app.get('/api/monumentos', async (req, res) => {
                 const unionIds = [...new Set([...aliasBienIds, ...altBienIds])];
                 if (unionIds.length > 0) {
                     where.push(`(unaccent(b.denominacion) ILIKE unaccent($${pi}) OR b.id = ANY($${pi + 1}::int[]))`);
+                    qNameIdx = pi;
                     params.push(`%${qTokenized}%`, unionIds);
                     pi += 2;
                 } else {
-                    where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi++})`);
+                    where.push(`unaccent(b.denominacion) ILIKE unaccent($${pi})`);
+                    qNameIdx = pi;
                     params.push(`%${qTokenized}%`);
+                    pi += 1;
                 }
+                // Guardar ids por fuente para el ranking por tier (nombre > alias > denom. alternativa)
+                qAliasIds = aliasBienIds;
+                qAltIds = altBienIds;
             }
         }
         if (req.query.solo_coords === 'true') {
@@ -2793,9 +2801,24 @@ app.get('/api/monumentos', async (req, res) => {
         const total = countResult.rows[0].total;
 
         // Get items
-        const allParams = [...params, limit, offset];
         const sortKey = req.query.sort || 'relevancia';
-        const useInterleave = sortKey === 'relevancia' && !req.query.pais;
+
+        // Ranking por tier de coincidencia textual (solo búsqueda q + orden relevancia):
+        // 1 = texto en el NOMBRE, 2 = en un ALIAS, 3 = en denominación alternativa. Dentro de cada tier, por RELEVANCE_SCORE.
+        let matchTier = null;
+        const tierParams = [];
+        if (qNameIdx !== null && sortKey === 'relevancia') {
+            const aliasIdx = pi; tierParams.push(qAliasIds); pi += 1;
+            const altIdx = pi;   tierParams.push(qAltIds);   pi += 1;
+            matchTier = `CASE
+                WHEN unaccent(b.denominacion) ILIKE unaccent($${qNameIdx}) THEN 1
+                WHEN b.id = ANY($${aliasIdx}::int[]) THEN 2
+                WHEN b.id = ANY($${altIdx}::int[]) THEN 3
+                ELSE 4 END`;
+        }
+
+        const allParams = [...params, ...tierParams, limit, offset];
+        const useInterleave = sortKey === 'relevancia' && !req.query.pais && !matchTier;
 
         let query;
         if (useInterleave) {
@@ -2826,6 +2849,9 @@ app.get('/api/monumentos', async (req, res) => {
                 LIMIT $${pi++} OFFSET $${pi}
             `;
         } else {
+            const orderExpr = matchTier
+                ? `${matchTier} ASC, ${RELEVANCE_SCORE} DESC, ${NORM_NAME} ASC`
+                : (SORT_OPTIONS[sortKey] || SORT_OPTIONS['relevancia']);
             query = `
                 SELECT
                     b.id, b.denominacion, b.tipo, b.clase, b.categoria,
@@ -2839,7 +2865,7 @@ app.get('/api/monumentos', async (req, res) => {
                 LEFT JOIN wikidata w ON b.id = w.bien_id
                 LEFT JOIN LATERAL (SELECT url FROM imagenes WHERE bien_id = b.id LIMIT 1) img ON true
                 ${whereClause}
-                ORDER BY ${SORT_OPTIONS[sortKey] || SORT_OPTIONS['relevancia']}
+                ORDER BY ${orderExpr}
                 LIMIT $${pi++} OFFSET $${pi}
             `;
         }
@@ -4864,7 +4890,8 @@ app.get('/api/personas', async (req, res) => {
         // Límit ampli (500): cobreix dels casos rellevants sense que la query
         // GROUP BY trigui massa. Si volem ordenar/paginar, després afegirem
         // ordering i scroll virtual al frontend.
-        const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
+        // Devolvemos todas las personas (advocaciones ~2312). El frontend ordena/filtra.
+        const limit = Math.min(parseInt(req.query.limit, 10) || 5000, 5000);
         const modo = req.query.modo === 'dedicados' ? 'dedicados' : 'autores';
         const rolesFilter = modo === 'dedicados' ? ROLES_DEDICADO : ROLES_AUTOR;
 
@@ -4907,15 +4934,29 @@ app.get('/api/personas/:qid/bienes', async (req, res) => {
         // extrem (Virgen María ~2000) pot retornar molts records — el client
         // pot manejar-ho i el mapa Leaflet també.
         const limit = Math.min(parseInt(req.query.limit, 10) || 10000, 10000);
+        // Orden: 'relevancia' (por defecto, mismo score que la búsqueda de monumentos) o 'alfabetico'.
+        const orden = req.query.orden === 'alfabetico' ? 'alfabetico' : 'relevancia';
+        const orderExpr = orden === 'alfabetico' ? '_nom ASC' : '_score DESC, _nom ASC';
+        // DISTINCT ON (b.id) en subconsulta: un bien puede tener varias filas para la misma
+        // persona (p.ej. roles 'advocacion' + 'lleva_nombre_de'). Deduplicamos por bien (así
+        // el conteo coincide con COUNT(DISTINCT bien_id) de /api/personas) y luego ordenamos.
         const r = await db.query(`
-            SELECT b.id, b.denominacion, b.municipio, b.provincia, b.comarca, b.pais,
-                   b.tipo_monumento, b.periodo, b.latitud, b.longitud,
-                   bp.rol, bp.nombre AS persona, w.qid, w.imagen_url
-            FROM bien_personas bp
-            JOIN bienes b ON b.id = bp.bien_id
-            LEFT JOIN wikidata w ON b.id = w.bien_id
-            WHERE bp.qid_persona = $1
-            ORDER BY b.id
+            SELECT id, denominacion, municipio, provincia, comarca, pais,
+                   tipo_monumento, periodo, latitud, longitud, rol, persona, qid, imagen_url
+            FROM (
+                SELECT DISTINCT ON (b.id)
+                       b.id, b.denominacion, b.municipio, b.provincia, b.comarca, b.pais,
+                       b.tipo_monumento, b.periodo, b.latitud, b.longitud,
+                       bp.rol, bp.nombre AS persona, w.qid, w.imagen_url,
+                       ${RELEVANCE_SCORE} AS _score,
+                       ${NORM_NAME} AS _nom
+                FROM bien_personas bp
+                JOIN bienes b ON b.id = bp.bien_id
+                LEFT JOIN wikidata w ON b.id = w.bien_id
+                WHERE bp.qid_persona = $1
+                ORDER BY b.id
+            ) sub
+            ORDER BY ${orderExpr}
             LIMIT ${limit}
         `, [qid]);
         res.json({ count: r.rows.length, bienes: r.rows });
