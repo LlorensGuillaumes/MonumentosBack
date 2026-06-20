@@ -5639,8 +5639,12 @@ app.get('/api/health', (req, res) => {
 app.get('/api/image-proxy', async (req, res) => {
     try {
         const url = String(req.query.url || '');
-        // Anti-SSRF: només https i dominis d'imatges coneguts.
-        if (!/^https:\/\/([a-z0-9-]+\.)*(wikimedia\.org|wikipedia\.org|wikidata\.org|staticflickr\.com|mapillary\.com)\//i.test(url)) {
+        let parsed;
+        try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'URL invàlida' }); }
+        const host = parsed.hostname.toLowerCase();
+        // Anti-SSRF: només https públic; bloquegem localhost i IPs privades/loopback.
+        if (parsed.protocol !== 'https:' || host === 'localhost' || host.endsWith('.local') ||
+            /^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[01])\.|::1)/.test(host)) {
             return res.status(400).json({ error: 'URL no permesa' });
         }
         const r = await fetch(url, { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' }, redirect: 'follow' });
