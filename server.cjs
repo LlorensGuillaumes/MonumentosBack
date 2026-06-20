@@ -5634,6 +5634,26 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Proxy d'imatges: serveix imatges externes (Wikimedia, etc.) des del mateix origen per
+// evitar CORS en copiar/descarregar des de l'admin (publicacions per a xarxes socials).
+app.get('/api/image-proxy', async (req, res) => {
+    try {
+        const url = String(req.query.url || '');
+        // Anti-SSRF: només https i dominis d'imatges coneguts.
+        if (!/^https:\/\/([a-z0-9-]+\.)*(wikimedia\.org|wikipedia\.org|wikidata\.org|staticflickr\.com|mapillary\.com)\//i.test(url)) {
+            return res.status(400).json({ error: 'URL no permesa' });
+        }
+        const r = await fetch(url, { headers: { 'User-Agent': 'PatrimonioEuropeo/1.0' }, redirect: 'follow' });
+        if (!r.ok) return res.status(502).json({ error: 'Error obtenint la imatge' });
+        const buf = Buffer.from(await r.arrayBuffer());
+        res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.send(buf);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`API Patrimonio Europeo corriendo en http://localhost:${PORT}`);
